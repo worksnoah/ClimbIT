@@ -37,11 +37,10 @@
 
     <!-- App -->
     <section id="appSection" class="hidden">
-      <!-- Feed only (upload moved into overlay) -->
-      <section class="card">
-        <h2>Feed</h2>
-        <div id="feed" class="feed"></div>
-      </section>
+      <!-- Snap feed (no card wrapper so it can be full-height) -->
+      <div id="feedWrap" class="snapWrap">
+        <div id="feed" class="feed snapFeed" aria-label="Climb feed"></div>
+      </div>
     </section>
   </main>
 
