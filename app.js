@@ -12,6 +12,66 @@ const appSection = document.getElementById("appSection");
 const authMsg = document.getElementById("authMsg");
 const uploadMsg = document.getElementById("uploadMsg");
 const feedEl = document.getElementById("feed");
+// --- Snap scroll (Option B) + autoplay visible video ---
+let isSnapping = false;
+
+function snapToIndex(idx){
+  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  if (!cards.length) return;
+  const clamped = Math.max(0, Math.min(cards.length - 1, idx));
+  feedEl.scrollTo({ top: cards[clamped].offsetTop, behavior: "smooth" });
+  setTimeout(() => updateVisibleVideo(), 380);
+}
+
+function getClosestCardIndex(){
+  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  const mid = feedEl.scrollTop + feedEl.clientHeight / 2;
+  let best = 0;
+  let bestDist = Infinity;
+
+  for (let i = 0; i < cards.length; i++){
+    const center = cards[i].offsetTop + cards[i].clientHeight / 2;
+    const d = Math.abs(center - mid);
+    if (d < bestDist){ bestDist = d; best = i; }
+  }
+  return best;
+}
+
+feedEl.addEventListener("wheel", (e) => {
+  if (isSnapping) return;
+  e.preventDefault();
+
+  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  if (!cards.length) return;
+
+  isSnapping = true;
+
+  const current = getClosestCardIndex();
+  const dir = e.deltaY > 0 ? 1 : -1;
+  snapToIndex(current + dir);
+
+  setTimeout(() => { isSnapping = false; }, 420);
+}, { passive: false });
+
+function updateVisibleVideo(){
+  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  if (!cards.length) return;
+
+  const best = getClosestCardIndex();
+
+  cards.forEach((c, i) => {
+    const v = c.querySelector("video");
+    if (!v) return;
+    if (i === best) v.play().catch(()=>{});
+    else v.pause();
+  });
+}
+
+feedEl.addEventListener("scroll", () => {
+  clearTimeout(window.__snapScrollT);
+  window.__snapScrollT = setTimeout(updateVisibleVideo, 120);
+});
+
 const userBox = document.getElementById("userBox");
 
 const emailEl = document.getElementById("email");
@@ -304,5 +364,6 @@ async function loadFeed() {
 
     feedEl.appendChild(card);
   }
+  updateVisibleVideo();
 }
 
