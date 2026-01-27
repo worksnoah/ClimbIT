@@ -1,18 +1,25 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>climbIT MVP</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
+  <!-- Top bar -->
   <header class="topbar">
+    <button id="openUpload" class="plusFab" aria-label="Share a climb">
+      <span class="plusIcon">+</span>
+    </button>
+
     <div class="brand">climbIT</div>
     <div id="userBox" class="userbox"></div>
   </header>
 
   <main class="container">
+    <!-- Auth -->
     <section id="authSection" class="card">
       <h2>Login / Signup</h2>
 
@@ -25,15 +32,30 @@
       </div>
 
       <div class="divider"></div>
-
-
       <p id="authMsg" class="msg"></p>
     </section>
 
+    <!-- App -->
     <section id="appSection" class="hidden">
+      <!-- Feed only (upload moved into overlay) -->
       <section class="card">
-        <h2>Upload a climb</h2>
+        <h2>Feed</h2>
+        <div id="feed" class="feed"></div>
+      </section>
+    </section>
+  </main>
 
+  <!-- Upload Overlay (must be inside body) -->
+  <div id="uploadOverlay" class="overlay hidden" aria-hidden="true">
+    <div class="overlayBackdrop"></div>
+
+    <section class="sharePanel" role="dialog" aria-modal="true" aria-label="Share a climb">
+      <div class="shareHeader">
+        <div class="shareTitle">Share a climb</div>
+        <button id="closeUpload" class="closeBtn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="shareBody">
         <input id="username" placeholder="set username (first time)" />
         <div class="row">
           <input id="grade" placeholder="Grade (ex: V5)" />
@@ -43,16 +65,10 @@
         <input id="video" type="file" accept="video/*" />
         <button id="btnUpload">Upload</button>
         <p id="uploadMsg" class="msg"></p>
-      </section>
-
-      <section class="card">
-        <h2>Feed</h2>
-        <div id="feed" class="feed"></div>
-      </section>
+      </div>
     </section>
-  </main>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>
 </html>
-
