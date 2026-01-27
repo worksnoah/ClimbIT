@@ -329,7 +329,7 @@ async function loadFeed() {
     const card = document.createElement("div");
     card.className = "routeCard";
     card.innerHTML = `
-      <video controls playsinline preload="metadata" src="${r.video_url}"></video>
+      <video class="clip" muted playsinline loop preload="metadata" src="${r.video_url}"></video>
       <div class="meta">
         <div><b>${r.grade}</b> • ${r.location}</div>
         <div class="sub">uploaded by @${r.uploader?.username ?? "unknown"}</div>
