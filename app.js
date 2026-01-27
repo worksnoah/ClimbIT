@@ -22,6 +22,38 @@ const gradeEl = document.getElementById("grade");
 const locationEl = document.getElementById("location");
 const videoEl = document.getElementById("video");
 
+// Upload overlay open/close
+const openUploadBtn = document.getElementById("openUpload");
+const uploadOverlay = document.getElementById("uploadOverlay");
+const closeUploadBtn = document.getElementById("closeUpload");
+
+function openUpload() {
+  uploadOverlay.classList.remove("hidden");
+  // allow CSS transitions to kick in
+  requestAnimationFrame(() => uploadOverlay.classList.add("show"));
+}
+
+function closeUpload() {
+  uploadOverlay.classList.remove("show");
+  // wait for animation then hide
+  setTimeout(() => uploadOverlay.classList.add("hidden"), 280);
+}
+
+openUploadBtn?.addEventListener("click", openUpload);
+closeUploadBtn?.addEventListener("click", closeUpload);
+
+// Close if you click outside the panel
+uploadOverlay?.addEventListener("click", (e) => {
+  if (e.target.classList.contains("overlayBackdrop")) closeUpload();
+});
+
+// Escape key closes
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && uploadOverlay && !uploadOverlay.classList.contains("hidden")) {
+    closeUpload();
+  }
+});
+
 // Buttons
 document.getElementById("btnSignup").onclick = signup;
 document.getElementById("btnLogin").onclick = login;
