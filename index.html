@@ -1,1 +1,59 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>climbIT MVP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">climbIT</div>
+    <div id="userBox" class="userbox"></div>
+  </header>
+
+  <main class="container">
+    <section id="authSection" class="card">
+      <h2>Login / Signup</h2>
+
+      <input id="email" placeholder="email" type="email" />
+      <input id="password" placeholder="password" type="password" />
+
+      <div class="row">
+        <button id="btnSignup">Sign up</button>
+        <button id="btnLogin">Log in</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <button id="btnGoogle">Continue with Google</button>
+
+      <p id="authMsg" class="msg"></p>
+    </section>
+
+    <section id="appSection" class="hidden">
+      <section class="card">
+        <h2>Upload a climb</h2>
+
+        <input id="username" placeholder="set username (first time)" />
+        <div class="row">
+          <input id="grade" placeholder="Grade (ex: V5)" />
+          <input id="location" placeholder="Gym / location" />
+        </div>
+
+        <input id="video" type="file" accept="video/*" />
+        <button id="btnUpload">Upload</button>
+        <p id="uploadMsg" class="msg"></p>
+      </section>
+
+      <section class="card">
+        <h2>Feed</h2>
+        <div id="feed" class="feed"></div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
 
