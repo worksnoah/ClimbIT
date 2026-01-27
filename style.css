@@ -296,3 +296,119 @@ button:disabled{
   .routeCard{ border-radius: 20px; }
   .routeCard video{ border-radius: 20px; }
 }
+
+/* ---------- Yellow plus button (top-left) ---------- */
+.plusFab{
+  width:44px;
+  height:44px;
+  border-radius: 14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  background: linear-gradient(180deg, var(--gold), var(--gold2));
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 14px 30px rgba(240,210,91,.20);
+
+  color:#111318;
+  font-weight:1000;
+  font-size:28px;
+  line-height:1;
+  cursor:pointer;
+
+  /* animation baseline */
+  transform-origin: 14px 14px; /* top-left-ish */
+  transition: transform .28s ease, filter .2s ease;
+}
+
+.plusFab:hover{ filter: brightness(1.03); transform: translateY(-1px); }
+.plusFab:active{ transform: translateY(0px) scale(.98); }
+
+.plusIcon{
+  display:block;
+  transform: translateY(-1px);
+}
+
+/* ---------- Overlay container ---------- */
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:999;
+}
+
+/* dark backdrop */
+.overlayBackdrop{
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(10px);
+  opacity:0;
+  transition: opacity .25s ease;
+}
+
+/* the expanding panel */
+.sharePanel{
+  position:absolute;
+  left:12px;
+  top:12px;
+  right:12px;
+  max-width: 520px;
+  margin: 0 auto;
+
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(20,22,40,.95), rgba(10,12,22,.90));
+  box-shadow: 0 30px 90px rgba(0,0,0,.65);
+
+  /* Start tiny, near the plus */
+  transform-origin: 0% 0%;
+  transform: translate(0,0) scale(0.08);
+  opacity:0;
+
+  transition: transform .28s ease, opacity .2s ease;
+}
+
+/* header inside panel */
+.shareHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.shareTitle{
+  font-size:18px;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+
+.closeBtn{
+  background: rgba(255,255,255,.10);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow:none;
+  padding:10px 12px;
+  border-radius: 14px;
+}
+
+/* body padding */
+.shareBody{
+  padding:14px;
+}
+
+/* ---------- Open state ---------- */
+.overlay.show .overlayBackdrop{ opacity:1; }
+
+.overlay.show .sharePanel{
+  /* expand to feel like it “became” the page */
+  transform: translate(0,0) scale(1);
+  opacity:1;
+}
+
+/* Make it full height-ish on mobile */
+@media (max-width:520px){
+  .sharePanel{
+    max-width:none;
+  }
+}
