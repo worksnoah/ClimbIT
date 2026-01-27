@@ -412,30 +412,35 @@ button:disabled{
     max-width:none;
   }
 }
+/* Full-height snap feed area inside the existing .container */
+.snapWrap{
+  margin-top: 14px;
+}
 
-/* Snap feed */
-.snapFeed {
-  height: calc(100vh - 64px); /* subtract topbar height (adjust if needed) */
+/* 1 video per scroll "page" */
+.snapFeed{
+  height: calc(100vh - 64px - 40px); /* topbar + container padding-ish */
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch;
-  padding: 0;
-  margin: 0;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: var(--glow2);
+  background: #05060a;
 }
 
-/* Each route card becomes one "page" */
-.snapFeed .routeCard {
-  height: calc(100vh - 64px);
+/* each card becomes one screen */
+.snapFeed .routeCard{
+  height: calc(100vh - 64px - 40px);
   scroll-snap-align: start;
   scroll-snap-stop: always;
-
-  border-radius: 0;            /* optional: more "full screen" */
+  border-radius: 0;
   border-left: none;
   border-right: none;
 }
 
-/* Make video fill the page */
-.snapFeed .routeCard video {
+/* make the video fill the viewport */
+.snapFeed .routeCard video{
   height: 100%;
   width: 100%;
   object-fit: cover;
