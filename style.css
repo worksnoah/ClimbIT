@@ -412,3 +412,32 @@ button:disabled{
     max-width:none;
   }
 }
+
+/* Snap feed */
+.snapFeed {
+  height: calc(100vh - 64px); /* subtract topbar height (adjust if needed) */
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 0;
+  margin: 0;
+}
+
+/* Each route card becomes one "page" */
+.snapFeed .routeCard {
+  height: calc(100vh - 64px);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+
+  border-radius: 0;            /* optional: more "full screen" */
+  border-left: none;
+  border-right: none;
+}
+
+/* Make video fill the page */
+.snapFeed .routeCard video {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
