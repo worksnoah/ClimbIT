@@ -63,7 +63,7 @@ body{
 .container{
   max-width: 520px;
   margin: 0 auto;
-  padding: 18px 14px 120px; /* extra bottom space if you later add a bottom bar */
+  padding: 0;
 }
 
 /* ---------- Cards ---------- */
@@ -414,7 +414,7 @@ button:disabled{
 }
 /* Full-height snap feed area inside the existing .container */
 .snapWrap{
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 /* 1 video per scroll "page" */
@@ -440,6 +440,31 @@ button:disabled{
 }
 
 /* make the video fill the viewport */
+.snapFeed .routeCard video{
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+/* --- SNAP FEED OVERRIDES (put at bottom of file) --- */
+.snapFeed{
+  height: calc(100vh - 64px); /* topbar height */
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0;
+  border: none;
+  background: #05060a;
+}
+
+.snapFeed .routeCard{
+  height: calc(100vh - 64px);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  border-radius: 0;
+  border: none;
+}
+
 .snapFeed .routeCard video{
   height: 100%;
   width: 100%;
