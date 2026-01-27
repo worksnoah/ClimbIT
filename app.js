@@ -25,7 +25,6 @@ const videoEl = document.getElementById("video");
 // Buttons
 document.getElementById("btnSignup").onclick = signup;
 document.getElementById("btnLogin").onclick = login;
-document.getElementById("btnGoogle").onclick = googleLogin;
 document.getElementById("btnUpload").onclick = uploadRoute;
 
 // ---------- App start ----------
