@@ -6,72 +6,12 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// DOM
+// ====== DOM ======
 const authSection = document.getElementById("authSection");
 const appSection = document.getElementById("appSection");
 const authMsg = document.getElementById("authMsg");
 const uploadMsg = document.getElementById("uploadMsg");
 const feedEl = document.getElementById("feed");
-// --- Snap scroll (Option B) + autoplay visible video ---
-let isSnapping = false;
-
-function snapToIndex(idx){
-  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
-  if (!cards.length) return;
-  const clamped = Math.max(0, Math.min(cards.length - 1, idx));
-  feedEl.scrollTo({ top: cards[clamped].offsetTop, behavior: "smooth" });
-  setTimeout(() => updateVisibleVideo(), 380);
-}
-
-function getClosestCardIndex(){
-  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
-  const mid = feedEl.scrollTop + feedEl.clientHeight / 2;
-  let best = 0;
-  let bestDist = Infinity;
-
-  for (let i = 0; i < cards.length; i++){
-    const center = cards[i].offsetTop + cards[i].clientHeight / 2;
-    const d = Math.abs(center - mid);
-    if (d < bestDist){ bestDist = d; best = i; }
-  }
-  return best;
-}
-
-feedEl.addEventListener("wheel", (e) => {
-  if (isSnapping) return;
-  e.preventDefault();
-
-  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
-  if (!cards.length) return;
-
-  isSnapping = true;
-
-  const current = getClosestCardIndex();
-  const dir = e.deltaY > 0 ? 1 : -1;
-  snapToIndex(current + dir);
-
-  setTimeout(() => { isSnapping = false; }, 420);
-}, { passive: false });
-
-function updateVisibleVideo(){
-  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
-  if (!cards.length) return;
-
-  const best = getClosestCardIndex();
-
-  cards.forEach((c, i) => {
-    const v = c.querySelector("video");
-    if (!v) return;
-    if (i === best) v.play().catch(()=>{});
-    else v.pause();
-  });
-}
-
-feedEl.addEventListener("scroll", () => {
-  clearTimeout(window.__snapScrollT);
-  window.__snapScrollT = setTimeout(updateVisibleVideo, 120);
-});
-
 const userBox = document.getElementById("userBox");
 
 const emailEl = document.getElementById("email");
@@ -82,44 +22,40 @@ const gradeEl = document.getElementById("grade");
 const locationEl = document.getElementById("location");
 const videoEl = document.getElementById("video");
 
-// Upload overlay open/close
+// Upload overlay
 const openUploadBtn = document.getElementById("openUpload");
 const uploadOverlay = document.getElementById("uploadOverlay");
 const closeUploadBtn = document.getElementById("closeUpload");
 
+// ====== Overlay open/close ======
 function openUpload() {
+  uploadMsg.textContent = "";
   uploadOverlay.classList.remove("hidden");
-  // allow CSS transitions to kick in
-  requestAnimationFrame(() => uploadOverlay.classList.add("show"));
 }
 
 function closeUpload() {
-  uploadOverlay.classList.remove("show");
-  // wait for animation then hide
-  setTimeout(() => uploadOverlay.classList.add("hidden"), 280);
+  uploadOverlay.classList.add("hidden");
 }
 
 openUploadBtn?.addEventListener("click", openUpload);
 closeUploadBtn?.addEventListener("click", closeUpload);
 
-// Close if you click outside the panel
 uploadOverlay?.addEventListener("click", (e) => {
   if (e.target.classList.contains("overlayBackdrop")) closeUpload();
 });
 
-// Escape key closes
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && uploadOverlay && !uploadOverlay.classList.contains("hidden")) {
     closeUpload();
   }
 });
 
-// Buttons
+// ====== Buttons ======
 document.getElementById("btnSignup").onclick = signup;
 document.getElementById("btnLogin").onclick = login;
 document.getElementById("btnUpload").onclick = uploadRoute;
 
-// ---------- App start ----------
+// ====== Start ======
 init();
 
 async function init() {
@@ -128,6 +64,12 @@ async function init() {
 
   supabase.auth.onAuthStateChange(async (_event, session) => {
     await renderSession(session);
+  });
+
+  // autoplay: whenever you stop scrolling, play visible one
+  feedEl.addEventListener("scroll", () => {
+    clearTimeout(window.__scrollT);
+    window.__scrollT = setTimeout(updateVisibleVideo, 120);
   });
 }
 
@@ -145,9 +87,12 @@ async function renderSession(session) {
   await ensureUserRow(session.user);
   await renderUserBox();
   await loadFeed();
+
+  // start playing first visible
+  setTimeout(updateVisibleVideo, 200);
 }
 
-// ---------- Auth ----------
+// ====== Auth ======
 async function signup() {
   authMsg.textContent = "";
   const email = emailEl.value.trim();
@@ -166,22 +111,8 @@ async function login() {
   authMsg.textContent = error ? error.message : "";
 }
 
-async function googleLogin() {
-  authMsg.textContent = "";
-
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: window.location.origin
-    }
-  });
-
-  if (error) authMsg.textContent = error.message;
-}
-
-// ---------- Ensure user row exists ----------
+// ====== Ensure user row exists ======
 async function ensureUserRow(user) {
-  // Try to find existing profile row
   const { data: existing } = await supabase
     .from("users")
     .select("id")
@@ -190,7 +121,6 @@ async function ensureUserRow(user) {
 
   if (existing) return;
 
-  // Create it (RLS allows insert if id = auth.uid())
   const email = user.email ?? null;
 
   const { error } = await supabase.from("users").insert({
@@ -220,7 +150,7 @@ async function renderUserBox() {
   document.getElementById("btnLogout").onclick = () => supabase.auth.signOut();
 }
 
-// ---------- Upload ----------
+// ====== Upload ======
 async function uploadRoute() {
   uploadMsg.textContent = "";
 
@@ -240,12 +170,10 @@ async function uploadRoute() {
     return;
   }
 
-  // Optional: set username once (simple MVP behavior)
   if (desiredUsername) {
     await supabase.from("users").update({ username: desiredUsername }).eq("id", user.id);
   }
 
-  // 1) Upload video to storage
   const ext = file.name.split(".").pop();
   const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
@@ -259,7 +187,6 @@ async function uploadRoute() {
     return;
   }
 
-  // 2) Get public URL
   const { data: pub } = supabase
     .storage
     .from("route-videos")
@@ -267,7 +194,6 @@ async function uploadRoute() {
 
   const video_url = pub.publicUrl;
 
-  // 3) Insert route row
   const { error: dbErr } = await supabase.from("routes").insert({
     video_url,
     grade,
@@ -284,14 +210,16 @@ async function uploadRoute() {
   gradeEl.value = "";
   locationEl.value = "";
   videoEl.value = "";
+  closeUpload();
 
   await renderUserBox();
   await loadFeed();
+  setTimeout(updateVisibleVideo, 200);
 }
 
-// ---------- Feed ----------
+// ====== Feed ======
 async function loadFeed() {
-  feedEl.innerHTML = "Loading…";
+  feedEl.innerHTML = "";
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -312,7 +240,7 @@ async function loadFeed() {
     return;
   }
 
-  // Fetch my sends so we can disable Sent button
+  // which routes have I sent
   let mySends = new Set();
   if (user) {
     const { data: sends } = await supabase
@@ -322,32 +250,33 @@ async function loadFeed() {
     (sends || []).forEach(s => mySends.add(s.route_id));
   }
 
-  feedEl.innerHTML = "";
   for (const r of routes) {
     const sentAlready = mySends.has(r.id);
 
     const card = document.createElement("div");
     card.className = "routeCard";
     card.innerHTML = `
-      <video class="clip" muted playsinline loop preload="metadata" src="${r.video_url}"></video>
+      <video muted playsinline loop preload="auto" src="${r.video_url}"></video>
+
       <div class="meta">
-        <div><b>${r.grade}</b> • ${r.location}</div>
-        <div class="sub">uploaded by @${r.uploader?.username ?? "unknown"}</div>
+        <div class="titleLine">${r.grade} • ${r.location}</div>
+        <div class="subLine">uploaded by @${r.uploader?.username ?? "unknown"}</div>
       </div>
+
       <button class="sentBtn" ${sentAlready ? "disabled" : ""}>
         ${sentAlready ? "Sent ✓" : "Sent ✔"}
       </button>
-      <div class="msg small"></div>
+
+      <div class="cardMsg"></div>
     `;
 
     const btn = card.querySelector(".sentBtn");
-    const msg = card.querySelector(".msg.small");
+    const msg = card.querySelector(".cardMsg");
 
     btn.onclick = async () => {
       msg.textContent = "";
       btn.disabled = true;
 
-      // call the RPC that inserts send + adds points atomically
       const { data: newTotal, error: rpcErr } = await supabase
         .rpc("log_send", { p_route_id: r.id });
 
@@ -364,6 +293,33 @@ async function loadFeed() {
 
     feedEl.appendChild(card);
   }
-  updateVisibleVideo();
 }
 
+// ====== Autoplay visible video ======
+function updateVisibleVideo() {
+  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  if (!cards.length) return;
+
+  const mid = feedEl.scrollTop + feedEl.clientHeight / 2;
+
+  let bestIdx = 0;
+  let bestDist = Infinity;
+
+  for (let i = 0; i < cards.length; i++) {
+    const c = cards[i];
+    const center = c.offsetTop + c.clientHeight / 2;
+    const d = Math.abs(center - mid);
+    if (d < bestDist) {
+      bestDist = d;
+      bestIdx = i;
+    }
+  }
+
+  cards.forEach((c, i) => {
+    const v = c.querySelector("video");
+    if (!v) return;
+
+    if (i === bestIdx) v.play().catch(()=>{});
+    else v.pause();
+  });
+}
