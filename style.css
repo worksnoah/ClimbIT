@@ -2,19 +2,12 @@
 :root{
   --bg0:#07080c;
   --bg1:#0b0d14;
-  --panel0:#0f1220;
-  --panel1:#0c0f1b;
-  --stroke:rgba(255,255,255,.10);
-  --stroke2:rgba(255,255,255,.14);
-  --text:#f4f5ff;
-  --muted:rgba(244,245,255,.75);
-  --muted2:rgba(244,245,255,.55);
 
-  /* Accent: “gold” from your reference image */
+  --text:#f4f5ff;
+
   --gold:#f0d25b;
   --gold2:#caa536;
 
-  /* Soft glow */
   --glow: 0 18px 60px rgba(0,0,0,.55);
   --glow2: 0 8px 30px rgba(0,0,0,.45);
 
@@ -22,7 +15,6 @@
 }
 
 *{ box-sizing:border-box; }
-
 html, body { height:100%; }
 
 body{
@@ -37,11 +29,11 @@ body{
 
 /* ---------- Top bar ---------- */
 .topbar{
+  height:64px;
   position:sticky; top:0; z-index:50;
   display:flex; justify-content:space-between; align-items:center;
   padding:14px 16px;
-  background:
-    linear-gradient(180deg, rgba(18,20,40,.92), rgba(8,10,20,.75));
+  background: linear-gradient(180deg, rgba(18,20,40,.92), rgba(8,10,20,.75));
   backdrop-filter: blur(10px);
   border-bottom:1px solid rgba(255,255,255,.08);
 }
@@ -60,20 +52,20 @@ body{
 }
 
 /* ---------- Layout container ---------- */
+/* IMPORTANT: no padding here so feed can be FULL screen */
 .container{
   max-width: 520px;
   margin: 0 auto;
   padding: 0;
 }
 
-/* ---------- Cards ---------- */
+/* Auth card can have padding via card styling */
 .card{
-  background:
-    linear-gradient(180deg, rgba(20,22,40,.88), rgba(12,14,26,.78));
+  margin: 18px 14px;
+  background: linear-gradient(180deg, rgba(20,22,40,.88), rgba(12,14,26,.78));
   border:1px solid rgba(255,255,255,.10);
   border-radius: var(--radius);
   padding:16px;
-  margin-bottom:14px;
   box-shadow: var(--glow2);
 }
 
@@ -81,10 +73,8 @@ body{
   margin:0 0 12px;
   font-size:28px;
   font-weight:900;
-  letter-spacing:.2px;
 }
 
-/* ---------- Helpers ---------- */
 .hidden{ display:none; }
 
 .divider{
@@ -105,25 +95,16 @@ input{
   padding:12px 14px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.10);
-  background:
-    linear-gradient(180deg, rgba(8,10,18,.95), rgba(10,12,22,.75));
+  background: linear-gradient(180deg, rgba(8,10,18,.95), rgba(10,12,22,.75));
   color:var(--text);
   outline:none;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.20);
 }
 
 input::placeholder{ color: rgba(244,245,255,.55); }
 
 input:focus{
   border-color: rgba(240,210,91,.55);
-  box-shadow:
-    0 0 0 3px rgba(240,210,91,.12),
-    inset 0 0 0 1px rgba(0,0,0,.20);
-}
-
-/* Make file input look less “default” */
-input[type="file"]{
-  padding:10px 12px;
+  box-shadow: 0 0 0 3px rgba(240,210,91,.12);
 }
 
 /* ---------- Buttons ---------- */
@@ -134,29 +115,15 @@ button{
   cursor:pointer;
   color:#111318;
   font-weight:900;
-  letter-spacing:.2px;
-  background:
-    linear-gradient(180deg, var(--gold), var(--gold2));
+  background: linear-gradient(180deg, var(--gold), var(--gold2));
   box-shadow: 0 10px 26px rgba(240,210,91,.18);
-}
-
-button:hover{
-  filter: brightness(1.03);
-  transform: translateY(-1px);
-}
-
-button:active{
-  transform: translateY(0px);
-  filter: brightness(.98);
 }
 
 button:disabled{
   opacity:.55;
   cursor:not-allowed;
-  transform:none;
 }
 
-/* For logout button if you want it more subtle */
 #btnLogout{
   background: rgba(255,255,255,.08);
   color: var(--text);
@@ -164,7 +131,11 @@ button:disabled{
   box-shadow:none;
 }
 
-/* ---------- Pills / badges ---------- */
+.msg{
+  margin-top:10px;
+  color: rgba(244,245,255,.75);
+}
+
 .pill{
   display:inline-flex;
   align-items:center;
@@ -173,128 +144,6 @@ button:disabled{
   border-radius:999px;
   background: rgba(0,0,0,.25);
   border:1px solid rgba(255,255,255,.12);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
-}
-
-.msg{
-  margin-top:10px;
-  color: rgba(244,245,255,.75);
-}
-
-.small{
-  font-size: 13px;
-  opacity: 0.92;
-}
-
-/* ---------- Feed ---------- */
-.feed{
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
-
-/* ---------- Route “Video Cards” (match screenshot vibe) ---------- */
-.routeCard{
-  position:relative;
-  overflow:hidden;
-  border-radius: 22px;
-  border:1px solid rgba(255,255,255,.10);
-  background: #05060a;
-  box-shadow: var(--glow);
-  padding:0; /* video card look */
-}
-
-/* Video full-bleed */
-.routeCard video{
-  width:100%;
-  display:block;
-  border-radius: 22px;
-  background:#000;
-}
-
-/* Overlay gradient like the UI screenshot */
-.routeCard::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,.00) 35%, rgba(0,0,0,.55) 75%, rgba(0,0,0,.72) 100%);
-  pointer-events:none;
-}
-
-/* Meta overlay */
-.meta{
-  position:absolute;
-  left:14px;
-  right:14px;
-  bottom:14px;
-  z-index:2;
-  margin:0;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-/* grade/location line */
-.meta > div:first-child{
-  font-size:18px;
-  font-weight:900;
-  letter-spacing:.2px;
-  text-shadow: 0 8px 25px rgba(0,0,0,.6);
-}
-
-/* uploader line */
-.sub{
-  opacity: .85;
-  font-size: 13px;
-  color: rgba(244,245,255,.80);
-  text-shadow: 0 8px 25px rgba(0,0,0,.65);
-}
-
-/* Sent button sits above overlay on the right like an action */
-.routeCard .sentBtn{
-  position:absolute;
-  right:14px;
-  bottom:14px;
-  z-index:3;
-
-  padding:10px 14px;
-  border-radius: 999px;
-
-  background: rgba(0,0,0,.40);
-  color: var(--text);
-  border:1px solid rgba(255,255,255,.14);
-  box-shadow: 0 10px 26px rgba(0,0,0,.35);
-  backdrop-filter: blur(10px);
-}
-
-.routeCard .sentBtn:hover{
-  background: rgba(0,0,0,.52);
-  transform: translateY(-1px);
-}
-
-.routeCard .sentBtn:disabled{
-  background: rgba(255,255,255,.10);
-  color: rgba(244,245,255,.70);
-  border-color: rgba(255,255,255,.12);
-}
-
-/* If you keep the little message inside the card, push it away from overlay */
-.routeCard .msg.small{
-  position:absolute;
-  left:14px;
-  bottom:54px;
-  z-index:3;
-  margin:0;
-  color: rgba(240,210,91,.95);
-  text-shadow: 0 10px 25px rgba(0,0,0,.65);
-}
-
-/* ---------- Mobile polish ---------- */
-@media (max-width: 420px){
-  .card h2{ font-size:26px; }
-  .routeCard{ border-radius: 20px; }
-  .routeCard video{ border-radius: 20px; }
 }
 
 /* ---------- Yellow plus button (top-left) ---------- */
@@ -305,48 +154,132 @@ button:disabled{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-
   background: linear-gradient(180deg, var(--gold), var(--gold2));
   border: 1px solid rgba(255,255,255,.12);
   box-shadow: 0 14px 30px rgba(240,210,91,.20);
-
   color:#111318;
-  font-weight:1000;
   font-size:28px;
   line-height:1;
-  cursor:pointer;
-
-  /* animation baseline */
-  transform-origin: 14px 14px; /* top-left-ish */
-  transition: transform .28s ease, filter .2s ease;
 }
 
-.plusFab:hover{ filter: brightness(1.03); transform: translateY(-1px); }
-.plusFab:active{ transform: translateY(0px) scale(.98); }
+.plusIcon{ transform: translateY(-1px); display:block; }
 
-.plusIcon{
-  display:block;
-  transform: translateY(-1px);
+/* =========================================================
+   FULL SCREEN SNAP FEED (TikTok / Reels style)
+   ========================================================= */
+
+#appSection{
+  height: calc(100vh - 64px); /* full screen minus topbar */
 }
 
-/* ---------- Overlay container ---------- */
+.snapFeed{
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  background: #05060a;
+}
+
+/* each card = full page */
+.routeCard{
+  height: 100%;
+  width: 100%;
+  position: relative;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow:hidden;
+  background:#000;
+}
+
+/* video fills entire page */
+.routeCard video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit: cover;
+}
+
+/* dark gradient for readable text */
+.routeCard::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.05) 35%, rgba(0,0,0,.55) 75%, rgba(0,0,0,.78) 100%);
+  pointer-events:none;
+}
+
+/* text overlay */
+.meta{
+  position:absolute;
+  left:16px;
+  right:16px;
+  bottom:18px;
+  z-index:3;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  text-shadow: 0 10px 25px rgba(0,0,0,.70);
+}
+
+.meta .titleLine{
+  font-size:24px;
+  font-weight:1000;
+}
+
+.meta .subLine{
+  opacity:.85;
+  font-size:14px;
+}
+
+/* sent button on right */
+.sentBtn{
+  position:absolute;
+  right:16px;
+  bottom:18px;
+  z-index:4;
+
+  padding:10px 14px;
+  border-radius:999px;
+
+  background: rgba(0,0,0,.40);
+  color: var(--text);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 26px rgba(0,0,0,.35);
+  backdrop-filter: blur(10px);
+}
+
+.sentBtn:disabled{
+  background: rgba(255,255,255,.10);
+  color: rgba(244,245,255,.70);
+}
+
+/* message above button */
+.cardMsg{
+  position:absolute;
+  left:16px;
+  bottom:62px;
+  z-index:4;
+  color: rgba(240,210,91,.95);
+  text-shadow: 0 10px 25px rgba(0,0,0,.70);
+}
+
+/* ---------- Upload Overlay ---------- */
 .overlay{
   position:fixed;
   inset:0;
   z-index:999;
 }
 
-/* dark backdrop */
 .overlayBackdrop{
   position:absolute;
   inset:0;
   background: rgba(0,0,0,.55);
   backdrop-filter: blur(10px);
-  opacity:0;
-  transition: opacity .25s ease;
 }
 
-/* the expanding panel */
 .sharePanel{
   position:absolute;
   left:12px;
@@ -354,21 +287,12 @@ button:disabled{
   right:12px;
   max-width: 520px;
   margin: 0 auto;
-
   border-radius: 22px;
   border: 1px solid rgba(255,255,255,.12);
   background: linear-gradient(180deg, rgba(20,22,40,.95), rgba(10,12,22,.90));
   box-shadow: 0 30px 90px rgba(0,0,0,.65);
-
-  /* Start tiny, near the plus */
-  transform-origin: 0% 0%;
-  transform: translate(0,0) scale(0.08);
-  opacity:0;
-
-  transition: transform .28s ease, opacity .2s ease;
 }
 
-/* header inside panel */
 .shareHeader{
   display:flex;
   align-items:center;
@@ -380,7 +304,6 @@ button:disabled{
 .shareTitle{
   font-size:18px;
   font-weight:900;
-  letter-spacing:.2px;
 }
 
 .closeBtn{
@@ -392,82 +315,4 @@ button:disabled{
   border-radius: 14px;
 }
 
-/* body padding */
-.shareBody{
-  padding:14px;
-}
-
-/* ---------- Open state ---------- */
-.overlay.show .overlayBackdrop{ opacity:1; }
-
-.overlay.show .sharePanel{
-  /* expand to feel like it “became” the page */
-  transform: translate(0,0) scale(1);
-  opacity:1;
-}
-
-/* Make it full height-ish on mobile */
-@media (max-width:520px){
-  .sharePanel{
-    max-width:none;
-  }
-}
-/* Full-height snap feed area inside the existing .container */
-.snapWrap{
-  margin-top: 0;
-}
-
-/* 1 video per scroll "page" */
-.snapFeed{
-  height: calc(100vh - 64px - 40px); /* topbar + container padding-ish */
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  -webkit-overflow-scrolling: touch;
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,.10);
-  box-shadow: var(--glow2);
-  background: #05060a;
-}
-
-/* each card becomes one screen */
-.snapFeed .routeCard{
-  height: calc(100vh - 64px - 40px);
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
-}
-
-/* make the video fill the viewport */
-.snapFeed .routeCard video{
-  height: 100%;
-  width: 100%;
-  object-fit: cover;
-  border-radius: 0;
-}
-/* --- SNAP FEED OVERRIDES (put at bottom of file) --- */
-.snapFeed{
-  height: calc(100vh - 64px); /* topbar height */
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  -webkit-overflow-scrolling: touch;
-  border-radius: 0;
-  border: none;
-  background: #05060a;
-}
-
-.snapFeed .routeCard{
-  height: calc(100vh - 64px);
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-  border-radius: 0;
-  border: none;
-}
-
-.snapFeed .routeCard video{
-  height: 100%;
-  width: 100%;
-  object-fit: cover;
-  border-radius: 0;
-}
+.shareBody{ padding:14px; }
