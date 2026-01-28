@@ -31,10 +31,12 @@ const closeUploadBtn = document.getElementById("closeUpload");
 function openUpload() {
   uploadMsg.textContent = "";
   uploadOverlay.classList.remove("hidden");
+  requestAnimationFrame(() => uploadOverlay.classList.add("show")); // if your CSS uses .show
 }
 
 function closeUpload() {
-  uploadOverlay.classList.add("hidden");
+  uploadOverlay.classList.remove("show");
+  setTimeout(() => uploadOverlay.classList.add("hidden"), 200);
 }
 
 openUploadBtn?.addEventListener("click", openUpload);
@@ -66,7 +68,7 @@ async function init() {
     await renderSession(session);
   });
 
-  // autoplay: whenever you stop scrolling, play visible one
+  // autoplay: whenever you stop scrolling, play the visible one
   feedEl.addEventListener("scroll", () => {
     clearTimeout(window.__scrollT);
     window.__scrollT = setTimeout(updateVisibleVideo, 120);
@@ -88,7 +90,6 @@ async function renderSession(session) {
   await renderUserBox();
   await loadFeed();
 
-  // start playing first visible
   setTimeout(updateVisibleVideo, 200);
 }
 
@@ -170,10 +171,12 @@ async function uploadRoute() {
     return;
   }
 
+  // optional username set
   if (desiredUsername) {
     await supabase.from("users").update({ username: desiredUsername }).eq("id", user.id);
   }
 
+  // upload to storage
   const ext = file.name.split(".").pop();
   const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
@@ -187,6 +190,7 @@ async function uploadRoute() {
     return;
   }
 
+  // public url
   const { data: pub } = supabase
     .storage
     .from("route-videos")
@@ -194,6 +198,7 @@ async function uploadRoute() {
 
   const video_url = pub.publicUrl;
 
+  // insert route row
   const { error: dbErr } = await supabase.from("routes").insert({
     video_url,
     grade,
@@ -210,6 +215,7 @@ async function uploadRoute() {
   gradeEl.value = "";
   locationEl.value = "";
   videoEl.value = "";
+
   closeUpload();
 
   await renderUserBox();
@@ -219,7 +225,7 @@ async function uploadRoute() {
 
 // ====== Feed ======
 async function loadFeed() {
-  feedEl.innerHTML = "";
+  feedEl.innerHTML = "Loading…";
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -250,60 +256,79 @@ async function loadFeed() {
     (sends || []).forEach(s => mySends.add(s.route_id));
   }
 
+  feedEl.innerHTML = "";
+
   for (const r of routes) {
     const sentAlready = mySends.has(r.id);
 
     const card = document.createElement("div");
     card.className = "routeCard";
     card.innerHTML = `
-      <video muted playsinline loop preload="auto" src="${r.video_url}"></video>
-      <button class="soundBtn" aria-label="Toggle sound">🔇</button>
+      <video class="clip" muted playsinline loop preload="metadata" src="${r.video_url}"></video>
 
       <div class="meta">
-        <div class="titleLine">${r.grade} • ${r.location}</div>
-        <div class="subLine">uploaded by @${r.uploader?.username ?? "unknown"}</div>
+        <div><b>${r.grade}</b> • ${r.location}</div>
+        <div class="sub">uploaded by @${r.uploader?.username ?? "unknown"}</div>
       </div>
 
       <button class="sentBtn" ${sentAlready ? "disabled" : ""}>
         ${sentAlready ? "Sent ✓" : "Sent ✔"}
       </button>
 
-      <div class="cardMsg"></div>
+      <button class="muteBtn" aria-label="Mute/unmute">🔇</button>
+
+      <div class="msg small"></div>
     `;
 
-    const btn = card.querySelector(".sentBtn");
-    const video = card.querySelector("video");
-    const soundBtn = card.querySelector(".soundBtn");
+    const sentBtn = card.querySelector(".sentBtn");
+    const msg = card.querySelector(".msg.small");
+    const video = card.querySelector("video.clip");
+    const muteBtn = card.querySelector(".muteBtn");
 
-soundBtn.onclick = (e) => {
-  e.stopPropagation();
-  video.muted = !video.muted;
-  soundBtn.textContent = video.muted ? "🔇" : "🔊";
-};
+    // --- play/pause on tap (except buttons)
+    card.addEventListener("click", async (e) => {
+      if (e.target.closest(".sentBtn")) return;
+      if (e.target.closest(".muteBtn")) return;
 
-// optional: tap anywhere on video toggles sound
-video.addEventListener("click", () => {
-  video.muted = !video.muted;
-  soundBtn.textContent = video.muted ? "🔇" : "🔊";
-});
+      if (video.paused) {
+        try { await video.play(); } catch {}
+      } else {
+        video.pause();
+      }
+    });
 
-    const msg = card.querySelector(".cardMsg");
+    // --- mute toggle button (sticky per clip)
+    function syncMuteIcon() {
+      muteBtn.textContent = video.muted ? "🔇" : "🔊";
+    }
+    syncMuteIcon();
 
-    btn.onclick = async () => {
+    muteBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      video.muted = !video.muted;
+      syncMuteIcon();
+
+      // if user unmutes and it was paused, try to start it
+      try { await video.play(); } catch {}
+    });
+
+    // --- Sent button
+    sentBtn.onclick = async (e) => {
+      e.stopPropagation();
       msg.textContent = "";
-      btn.disabled = true;
+      sentBtn.disabled = true;
 
       const { data: newTotal, error: rpcErr } = await supabase
         .rpc("log_send", { p_route_id: r.id });
 
       if (rpcErr) {
         msg.textContent = rpcErr.message;
-        btn.disabled = false;
+        sentBtn.disabled = false;
         return;
       }
 
       msg.textContent = `Logged! Total: ${newTotal} pts`;
-      btn.textContent = "Sent ✓";
+      sentBtn.textContent = "Sent ✓";
       await renderUserBox();
     };
 
@@ -332,10 +357,13 @@ function updateVisibleVideo() {
   }
 
   cards.forEach((c, i) => {
-    const v = c.querySelector("video");
+    const v = c.querySelector("video.clip");
     if (!v) return;
 
-    if (i === bestIdx) v.play().catch(()=>{});
-    else v.pause();
+    if (i === bestIdx) {
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
   });
 }
