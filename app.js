@@ -5,6 +5,7 @@ const SUPABASE_URL = "https://ddwjotqwjiaovlwcwokx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkd2pvdHF3amlhb3Zsd2N3b2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NDMwMDYsImV4cCI6MjA4NTExOTAwNn0.JhufB9_M09PCgqiKCgQGL6a2dZ03xYcK0b0czjUSdIg";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let isUploading = false;
 
 // ====== DOM ======
 const authSection = document.getElementById("authSection");
@@ -60,6 +61,8 @@ document.getElementById("btnUpload").onclick = uploadRoute;
 // ====== Start ======
 init();
 
+let scrollListenerSet = false;
+
 async function init() {
   const { data: { session } } = await supabase.auth.getSession();
   await renderSession(session);
@@ -68,12 +71,13 @@ async function init() {
     await renderSession(session);
   });
 
-  // autoplay: whenever you stop scrolling, play the visible one
-  feedEl.addEventListener("scroll", () => {
-  clearTimeout(window.__scrollT);
-  window.__scrollT = setTimeout(updateActiveWindow, 120);
-  });
-
+  if (!scrollListenerSet) {
+    scrollListenerSet = true;
+    feedEl.addEventListener("scroll", () => {
+      clearTimeout(window.__scrollT);
+      window.__scrollT = setTimeout(updateVisibleVideo, 120);
+    });
+  }
 }
 
 async function renderSession(session) {
@@ -152,76 +156,98 @@ async function renderUserBox() {
   document.getElementById("btnLogout").onclick = () => supabase.auth.signOut();
 }
 
-// ====== Upload ======
 async function uploadRoute() {
+  if (isUploading) return; // prevent double-click bugs
+  isUploading = true;
+
   uploadMsg.textContent = "";
+  const uploadBtn = document.getElementById("btnUpload");
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = "Uploading…";
 
-  const grade = gradeEl.value.trim();
-  const location = locationEl.value.trim();
-  const file = videoEl.files[0];
-  const desiredUsername = usernameEl.value.trim();
+  try {
+    const grade = gradeEl.value.trim();
+    const location = locationEl.value.trim();
+    const file = videoEl.files[0];
+    const desiredUsername = usernameEl.value.trim();
 
-  if (!grade || !location || !file) {
-    uploadMsg.textContent = "Add grade, location, and a video file.";
-    return;
+    if (!grade || !location || !file) {
+      uploadMsg.textContent = "Add grade, location, and a video file.";
+      return;
+    }
+
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) {
+      uploadMsg.textContent = "Not logged in.";
+      return;
+    }
+
+    // Optional: set username
+    if (desiredUsername) {
+      const { error: nameErr } = await supabase
+        .from("users")
+        .update({ username: desiredUsername })
+        .eq("id", user.id);
+      if (nameErr) console.log("username update error:", nameErr.message);
+    }
+
+    // 1) Upload video to storage
+    const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
+    const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: upErr } = await supabase
+      .storage
+      .from("route-videos")
+      .upload(filePath, file, { contentType: file.type, upsert: false });
+
+    if (upErr) {
+      uploadMsg.textContent = "Upload failed: " + upErr.message;
+      return;
+    }
+
+    // 2) Public URL
+    const { data: pub } = supabase
+      .storage
+      .from("route-videos")
+      .getPublicUrl(filePath);
+
+    const video_url = pub.publicUrl;
+
+    // 3) Insert DB row
+    const { error: dbErr } = await supabase.from("routes").insert({
+      video_url,
+      grade,
+      location,
+      uploader_id: user.id
+    });
+
+    if (dbErr) {
+      uploadMsg.textContent = "DB insert failed: " + dbErr.message;
+      return;
+    }
+
+    // ✅ Success UI
+    uploadMsg.textContent = "Uploaded!";
+    gradeEl.value = "";
+    locationEl.value = "";
+    videoEl.value = "";
+
+    // ✅ Refresh everything cleanly
+    await renderUserBox();
+    await loadFeed();
+
+    // jump feed to top and play first card
+    feedEl.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(updateVisibleVideo, 250);
+
+    // close overlay after a short beat so user sees "Uploaded!"
+    setTimeout(() => closeUpload(), 400);
+
+  } finally {
+    isUploading = false;
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = "Upload";
   }
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    uploadMsg.textContent = "Not logged in.";
-    return;
-  }
-
-  // optional username set
-  if (desiredUsername) {
-    await supabase.from("users").update({ username: desiredUsername }).eq("id", user.id);
-  }
-
-  // upload to storage
-  const ext = file.name.split(".").pop();
-  const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
-
-  const { error: upErr } = await supabase
-    .storage
-    .from("route-videos")
-    .upload(filePath, file, { contentType: file.type });
-
-  if (upErr) {
-    uploadMsg.textContent = "Upload failed: " + upErr.message;
-    return;
-  }
-
-  // public url
-  const { data: pub } = supabase
-    .storage
-    .from("route-videos")
-    .getPublicUrl(filePath);
-
-  const video_url = pub.publicUrl;
-
-  // insert route row
-  const { error: dbErr } = await supabase.from("routes").insert({
-    video_url,
-    grade,
-    location,
-    uploader_id: user.id
-  });
-
-  if (dbErr) {
-    uploadMsg.textContent = "DB insert failed: " + dbErr.message;
-    return;
-  }
-
-  uploadMsg.textContent = "Uploaded!";
-  gradeEl.value = "";
-  locationEl.value = "";
-  videoEl.value = "";
-
-  closeUpload();
-
-  await renderUserBox();
-  await loadFeed();
-  setTimeout(updateVisibleVideo, 200);
 }
 
 // ====== Feed ======
