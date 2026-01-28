@@ -2,10 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // 1) PUT YOUR PROJECT VALUES HERE (Settings → API)
 const SUPABASE_URL = "https://ddwjotqwjiaovlwcwokx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkd2pvdHF3amlhb3Zsd2N3b2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NDMwMDYsImV4cCI6MjA4NTExOTAwNn0.JhufB9_M09PCgqiKCgQGL6a2dZ03xYcK0b0czjUSdIg";
+const SUPABASE_ANON_KEY = "PASTE_YOURS_HERE"; // keep yours
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let isUploading = false;
 
 // ====== DOM ======
 const authSection = document.getElementById("authSection");
@@ -28,11 +27,14 @@ const openUploadBtn = document.getElementById("openUpload");
 const uploadOverlay = document.getElementById("uploadOverlay");
 const closeUploadBtn = document.getElementById("closeUpload");
 
+// ====== State ======
+let isUploading = false;
+
 // ====== Overlay open/close ======
 function openUpload() {
   uploadMsg.textContent = "";
   uploadOverlay.classList.remove("hidden");
-  requestAnimationFrame(() => uploadOverlay.classList.add("show")); // if your CSS uses .show
+  requestAnimationFrame(() => uploadOverlay.classList.add("show"));
 }
 
 function closeUpload() {
@@ -61,15 +63,15 @@ document.getElementById("btnUpload").onclick = uploadRoute;
 // ====== Start ======
 init();
 
-let scrollListenerSet = false;
-function scheduleWindowUpdate(){
+function scheduleWindowUpdate() {
   clearTimeout(window.__scrollT);
-  window.__scrollT = setTimeout(updateActiveWindow, 80);
+  window.__scrollT = setTimeout(updateActiveWindow, 90);
 }
 
 feedEl.addEventListener("scroll", scheduleWindowUpdate, { passive: true });
 feedEl.addEventListener("touchend", scheduleWindowUpdate, { passive: true });
 feedEl.addEventListener("wheel", scheduleWindowUpdate, { passive: true });
+
 async function init() {
   const { data: { session } } = await supabase.auth.getSession();
   await renderSession(session);
@@ -77,14 +79,6 @@ async function init() {
   supabase.auth.onAuthStateChange(async (_event, session) => {
     await renderSession(session);
   });
-
-  if (!scrollListenerSet) {
-    scrollListenerSet = true;
-    feedEl.addEventListener("scroll", () => {
-      clearTimeout(window.__scrollT);
-      window.__scrollT = setTimeout(updateVisibleVideo, 120);
-    });
-  }
 }
 
 async function renderSession(session) {
@@ -102,7 +96,11 @@ async function renderSession(session) {
   await renderUserBox();
   await loadFeed();
 
-  setTimeout(updateVisibleVideo, 200);
+  // start playing first visible
+  requestAnimationFrame(() => {
+    feedEl.scrollTop = 0;
+    updateActiveWindow();
+  });
 }
 
 // ====== Auth ======
@@ -163,42 +161,50 @@ async function renderUserBox() {
   document.getElementById("btnLogout").onclick = () => supabase.auth.signOut();
 }
 
+// ====== Upload (adds points on upload) ======
+// IMPORTANT: Create this SQL function in Supabase (SQL editor):
+// create or replace function log_upload(p_user uuid) returns void language sql as $$
+//   update users set total_points = total_points + 1 where id = p_user;
+// $$;
 async function uploadRoute() {
-  if (isUploading) return; // prevent double-click bugs
+  if (isUploading) return;
   isUploading = true;
 
-  uploadMsg.textContent = "";
   const uploadBtn = document.getElementById("btnUpload");
   uploadBtn.disabled = true;
+  const oldBtnText = uploadBtn.textContent;
   uploadBtn.textContent = "Uploading…";
+  uploadMsg.textContent = "";
 
   try {
-    const grade = gradeEl.value.trim();
     const location = locationEl.value.trim();
     const file = videoEl.files[0];
     const desiredUsername = usernameEl.value.trim();
 
-    if (!grade || !location || !file) {
-      uploadMsg.textContent = "Add grade, location, and a video file.";
+    // ✅ grade: integers only 0–14
+    const gradeNum = Number(gradeEl.value);
+    if (!Number.isInteger(gradeNum) || gradeNum < 0 || gradeNum > 14) {
+      uploadMsg.textContent = "Grade must be a number from 0 to 14.";
       return;
     }
 
-    const { data: { user }, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !user) {
+    if (!location || !file) {
+      uploadMsg.textContent = "Add location and a video file.";
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       uploadMsg.textContent = "Not logged in.";
       return;
     }
 
-    // Optional: set username
+    // optional username set
     if (desiredUsername) {
-      const { error: nameErr } = await supabase
-        .from("users")
-        .update({ username: desiredUsername })
-        .eq("id", user.id);
-      if (nameErr) console.log("username update error:", nameErr.message);
+      await supabase.from("users").update({ username: desiredUsername }).eq("id", user.id);
     }
 
-    // 1) Upload video to storage
+    // 1) Upload video
     const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
     const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
@@ -220,10 +226,10 @@ async function uploadRoute() {
 
     const video_url = pub.publicUrl;
 
-    // 3) Insert DB row
+    // 3) Insert route row (grade stored as number)
     const { error: dbErr } = await supabase.from("routes").insert({
       video_url,
-      grade,
+      grade: gradeNum,
       location,
       uploader_id: user.id
     });
@@ -233,35 +239,40 @@ async function uploadRoute() {
       return;
     }
 
-    // ✅ Success UI
-    uploadMsg.textContent = "Uploaded!";
+    // 4) ✅ Add points ON UPLOAD (server-side function)
+    const { error: ptsErr } = await supabase.rpc("log_upload", { p_user: user.id });
+    if (ptsErr) {
+      // still uploaded fine; just show warning
+      console.log("log_upload error:", ptsErr.message);
+    }
+
+    uploadMsg.textContent = "Uploaded! +1 point";
+
+    // clear form
     gradeEl.value = "";
     locationEl.value = "";
     videoEl.value = "";
 
-    // ✅ Refresh everything cleanly
+    // refresh UI + feed
     await renderUserBox();
     await loadFeed();
 
-    // jump feed to top and play first card
+    // reset feed to top and play first
     feedEl.scrollTo({ top: 0, behavior: "smooth" });
-    setTimeout(updateVisibleVideo, 250);
+    setTimeout(() => updateActiveWindow(), 200);
 
-    // close overlay after a short beat so user sees "Uploaded!"
-    setTimeout(() => closeUpload(), 400);
-
+    // close overlay after a beat
+    setTimeout(() => closeUpload(), 350);
   } finally {
     isUploading = false;
     uploadBtn.disabled = false;
-    uploadBtn.textContent = "Upload";
+    uploadBtn.textContent = oldBtnText;
   }
 }
 
-// ====== Feed ======
+// ====== Feed (NO send button) ======
 async function loadFeed() {
   feedEl.innerHTML = "Loading…";
-
-  const { data: { user } } = await supabase.auth.getUser();
 
   const { data: routes, error } = await supabase
     .from("routes")
@@ -274,56 +285,39 @@ async function loadFeed() {
       uploader:users(username)
     `)
     .order("created_at", { ascending: false });
-  video.addEventListener("error", () => {
-    card.remove(); // hides rows whose video URL no longer works
-  });
+
   if (error) {
     feedEl.innerHTML = "Error loading feed: " + error.message;
     return;
   }
 
-  // which routes have I sent
-  let mySends = new Set();
-  if (user) {
-    const { data: sends } = await supabase
-      .from("sends")
-      .select("route_id")
-      .eq("user_id", user.id);
-    (sends || []).forEach(s => mySends.add(s.route_id));
-  }
-
   feedEl.innerHTML = "";
 
   for (const r of routes) {
-    const sentAlready = mySends.has(r.id);
-
     const card = document.createElement("div");
     card.className = "routeCard";
+
     card.innerHTML = `
       <video class="clip" muted playsinline loop preload="none" data-src="${r.video_url}"></video>
 
       <div class="meta">
-        <div><b>${r.grade}</b> • ${r.location}</div>
-        <div class="sub">uploaded by @${r.uploader?.username ?? "unknown"}</div>
+        <div class="titleLine"><b>V${Number(r.grade)}</b> • ${escapeHtml(r.location)}</div>
+        <div class="subLine">uploaded by @${escapeHtml(r.uploader?.username ?? "unknown")}</div>
       </div>
 
-      <button class="sentBtn" ${sentAlready ? "disabled" : ""}>
-        ${sentAlready ? "Sent ✓" : "Sent ✔"}
-      </button>
-
       <button class="muteBtn" aria-label="Mute/unmute">🔇</button>
-
-      <div class="msg small"></div>
     `;
 
-    const sentBtn = card.querySelector(".sentBtn");
-    const msg = card.querySelector(".msg.small");
     const video = card.querySelector("video.clip");
     const muteBtn = card.querySelector(".muteBtn");
 
-    // --- play/pause on tap (except buttons)
+    // If the URL is dead, remove it (prevents ghost rows)
+    video.addEventListener("error", () => {
+      card.remove();
+    });
+
+    // Play/pause on tap (except mute button)
     card.addEventListener("click", async (e) => {
-      if (e.target.closest(".sentBtn")) return;
       if (e.target.closest(".muteBtn")) return;
 
       if (video.paused) {
@@ -333,7 +327,7 @@ async function loadFeed() {
       }
     });
 
-    // --- mute toggle button (sticky per clip)
+    // Mute toggle
     function syncMuteIcon() {
       muteBtn.textContent = video.muted ? "🔇" : "🔊";
     }
@@ -343,41 +337,18 @@ async function loadFeed() {
       e.stopPropagation();
       video.muted = !video.muted;
       syncMuteIcon();
-
-      // if user unmutes and it was paused, try to start it
       try { await video.play(); } catch {}
     });
 
-    // --- Sent button
-    sentBtn.onclick = async (e) => {
-      e.stopPropagation();
-      msg.textContent = "";
-      sentBtn.disabled = true;
-
-      const { data: newTotal, error: rpcErr } = await supabase
-        .rpc("log_send", { p_route_id: r.id });
-
-      if (rpcErr) {
-        msg.textContent = rpcErr.message;
-        sentBtn.disabled = false;
-        return;
-      }
-
-      msg.textContent = `Logged! Total: ${newTotal} pts`;
-      sentBtn.textContent = "Sent ✓";
-      await renderUserBox();
-    };
-
     feedEl.appendChild(card);
   }
-  setTimeout(updateActiveWindow, 50);
-  requestAnimationFrame(() => {
-  feedEl.scrollTop = 0;   // optional: start at top
-  updateActiveWindow();
-});
 
+  // Ensure active window loads after render
+  setTimeout(updateActiveWindow, 60);
 }
-function getClosestCardIndex(){
+
+// ====== Lazy-load window: keep only nearby videos loaded ======
+function getClosestCardIndex() {
   const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
   if (!cards.length) return 0;
 
@@ -387,18 +358,19 @@ function getClosestCardIndex(){
   let best = 0;
   let bestDist = Infinity;
 
-  for (let i = 0; i < cards.length; i++){
+  for (let i = 0; i < cards.length; i++) {
     const r = cards[i].getBoundingClientRect();
     const center = r.top + r.height / 2;
     const d = Math.abs(center - targetY);
-    if (d < bestDist){ bestDist = d; best = i; }
+    if (d < bestDist) { bestDist = d; best = i; }
   }
   return best;
 }
 
-function loadVideoEl(video){
+function loadVideoEl(video) {
   if (!video) return;
   if (video.src) return;
+
   const url = video.dataset.src;
   if (!url) return;
 
@@ -407,44 +379,40 @@ function loadVideoEl(video){
   video.load();
 }
 
-function unloadVideoEl(video){
+function unloadVideoEl(video) {
   if (!video) return;
   if (!video.src) return;
 
   video.pause();
   video.removeAttribute("src");
-  video.load(); // releases resource in most browsers
+  video.load();
 }
 
-function updateActiveWindow(){
+function updateActiveWindow() {
   const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
   if (!cards.length) return;
 
   const active = getClosestCardIndex();
 
-  // only keep active, prev, next
+  // keep active ±2 (fast + reliable)
   const keep = new Set([active - 2, active - 1, active, active + 1, active + 2]);
 
   cards.forEach((card, idx) => {
     const v = card.querySelector("video.clip");
     if (!v) return;
 
-    if (keep.has(idx)) {
-      loadVideoEl(v);
-      v.preload = "metadata";
-    } else {
-      unloadVideoEl(v);
-    }
+    if (keep.has(idx)) loadVideoEl(v);
+    else unloadVideoEl(v);
   });
 
-  // autoplay active (muted) once it’s loaded
+  // autoplay only active
   const activeVideo = cards[active]?.querySelector("video.clip");
   if (activeVideo) {
     loadVideoEl(activeVideo);
-    activeVideo.play().catch(()=>{});
+    activeVideo.play().catch(() => {});
   }
 
-  // pause prev/next so only 1 plays
+  // pause all others
   cards.forEach((card, idx) => {
     if (idx === active) return;
     const v = card.querySelector("video.clip");
@@ -452,35 +420,12 @@ function updateActiveWindow(){
   });
 }
 
-
-// ====== Autoplay visible video ======
-function updateVisibleVideo() {
-  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
-  if (!cards.length) return;
-
-  const mid = feedEl.scrollTop + feedEl.clientHeight / 2;
-
-  let bestIdx = 0;
-  let bestDist = Infinity;
-
-  for (let i = 0; i < cards.length; i++) {
-    const c = cards[i];
-    const center = c.offsetTop + c.clientHeight / 2;
-    const d = Math.abs(center - mid);
-    if (d < bestDist) {
-      bestDist = d;
-      bestIdx = i;
-    }
-  }
-
-  cards.forEach((c, i) => {
-    const v = c.querySelector("video.clip");
-    if (!v) return;
-
-    if (i === bestIdx) {
-      v.play().catch(() => {});
-    } else {
-      v.pause();
-    }
-  });
+// ====== Helpers ======
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
