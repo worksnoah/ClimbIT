@@ -1,9 +1,27 @@
-/* ---------- Base ---------- */
+/* =========================================================
+   climbIT MVP — FULL CSS (clean + consistent with your JS)
+   - Full-screen snap feed (1 video per screen)
+   - Click video to play/pause
+   - Mute button stays top-right (class: .muteBtn)
+   - Sent button bottom-right (class: .sentBtn)
+   - Message text uses your JS: <div class="msg small"></div>
+   - Upload overlay + top-left plus button
+   ========================================================= */
+
+/* ---------- Theme ---------- */
 :root{
   --bg0:#07080c;
   --bg1:#0b0d14;
 
+  --panelA: rgba(20,22,40,.88);
+  --panelB: rgba(12,14,26,.78);
+
+  --stroke: rgba(255,255,255,.10);
+  --stroke2: rgba(255,255,255,.14);
+
   --text:#f4f5ff;
+  --muted: rgba(244,245,255,.75);
+  --muted2: rgba(244,245,255,.55);
 
   --gold:#f0d25b;
   --gold2:#caa536;
@@ -11,16 +29,15 @@
   --glow: 0 18px 60px rgba(0,0,0,.55);
   --glow2: 0 8px 30px rgba(0,0,0,.45);
 
-  --radius:18px;
+  --radius: 18px;
+  --topbarH: 64px;
 }
 
 *{ box-sizing:border-box; }
-html, body { height:100%; }
-
+html, body { height:100%; margin:0; }
 body{
   font-family: system-ui, -apple-system, Arial;
-  margin:0;
-  color:var(--text);
+  color: var(--text);
   background:
     radial-gradient(1200px 700px at 20% -20%, rgba(240,210,91,.10), transparent 55%),
     radial-gradient(900px 600px at 110% 10%, rgba(124,77,255,.10), transparent 55%),
@@ -29,302 +46,326 @@ body{
 
 /* ---------- Top bar ---------- */
 .topbar{
-  height:64px;
-  position:sticky; top:0; z-index:50;
-  display:flex; justify-content:space-between; align-items:center;
-  padding:14px 16px;
+  height: var(--topbarH);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 14px 16px;
+
   background: linear-gradient(180deg, rgba(18,20,40,.92), rgba(8,10,20,.75));
   backdrop-filter: blur(10px);
-  border-bottom:1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
 .brand{
-  font-weight:900;
-  letter-spacing:.6px;
-  text-transform:lowercase;
-  font-size:20px;
+  font-weight: 900;
+  letter-spacing: .6px;
+  text-transform: lowercase;
+  font-size: 20px;
 }
 
 .userbox{
   display:flex;
-  gap:10px;
   align-items:center;
+  gap: 10px;
 }
 
 /* ---------- Layout container ---------- */
-/* IMPORTANT: no padding here so feed can be FULL screen */
+/* No padding so the feed can be truly full height */
 .container{
   max-width: 520px;
   margin: 0 auto;
   padding: 0;
 }
 
-/* Auth card can have padding via card styling */
+/* Auth card (and any other cards you might keep) */
 .card{
   margin: 18px 14px;
-  background: linear-gradient(180deg, rgba(20,22,40,.88), rgba(12,14,26,.78));
-  border:1px solid rgba(255,255,255,.10);
+  background: linear-gradient(180deg, var(--panelA), var(--panelB));
+  border: 1px solid var(--stroke);
   border-radius: var(--radius);
-  padding:16px;
+  padding: 16px;
   box-shadow: var(--glow2);
 }
 
 .card h2{
-  margin:0 0 12px;
-  font-size:28px;
-  font-weight:900;
+  margin: 0 0 12px;
+  font-size: 28px;
+  font-weight: 900;
 }
 
+/* Helpers */
 .hidden{ display:none; }
+.divider{ height:1px; background: var(--stroke); margin: 12px 0; }
+.row{ display:flex; gap: 10px; margin-top: 10px; }
 
-.divider{
-  height:1px;
-  background: rgba(255,255,255,.10);
-  margin: 12px 0;
-}
-
-.row{
-  display:flex;
-  gap:10px;
-  margin-top:10px;
-}
-
-/* ---------- Inputs ---------- */
+/* Inputs */
 input{
   width:100%;
-  padding:12px 14px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.10);
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
   background: linear-gradient(180deg, rgba(8,10,18,.95), rgba(10,12,22,.75));
-  color:var(--text);
+  color: var(--text);
   outline:none;
 }
-
-input::placeholder{ color: rgba(244,245,255,.55); }
-
+input::placeholder{ color: var(--muted2); }
 input:focus{
   border-color: rgba(240,210,91,.55);
   box-shadow: 0 0 0 3px rgba(240,210,91,.12);
 }
 
-/* ---------- Buttons ---------- */
+/* Buttons (base) */
 button{
-  padding:11px 14px;
+  padding: 11px 14px;
   border-radius: 999px;
-  border:1px solid rgba(255,255,255,.10);
-  cursor:pointer;
-  color:#111318;
-  font-weight:900;
+  border: 1px solid var(--stroke);
+  cursor: pointer;
+  color: #111318;
+  font-weight: 900;
   background: linear-gradient(180deg, var(--gold), var(--gold2));
   box-shadow: 0 10px 26px rgba(240,210,91,.18);
 }
+button:disabled{ opacity:.55; cursor:not-allowed; }
 
-button:disabled{
-  opacity:.55;
-  cursor:not-allowed;
-}
-
+/* Logout button special */
 #btnLogout{
   background: rgba(255,255,255,.08);
   color: var(--text);
-  border:1px solid rgba(255,255,255,.12);
-  box-shadow:none;
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: none;
 }
 
-.msg{
-  margin-top:10px;
-  color: rgba(244,245,255,.75);
-}
+/* Text helpers */
+.msg{ margin-top: 10px; color: var(--muted); }
+.small{ font-size: 13px; opacity: .92; }
 
+/* Pills */
 .pill{
   display:inline-flex;
   align-items:center;
-  gap:8px;
-  padding:8px 12px;
-  border-radius:999px;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
   background: rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.12);
 }
 
-/* ---------- Yellow plus button (top-left) ---------- */
+/* ---------- Yellow plus button ---------- */
 .plusFab{
-  width:44px;
-  height:44px;
+  width: 44px;
+  height: 44px;
   border-radius: 14px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
+
   background: linear-gradient(180deg, var(--gold), var(--gold2));
   border: 1px solid rgba(255,255,255,.12);
   box-shadow: 0 14px 30px rgba(240,210,91,.20);
-  color:#111318;
-  font-size:28px;
-  line-height:1;
-}
 
+  color:#111318;
+  font-size: 28px;
+  line-height: 1;
+}
 .plusIcon{ transform: translateY(-1px); display:block; }
 
 /* =========================================================
-   FULL SCREEN SNAP FEED (TikTok / Reels style)
+   FULL SCREEN SNAP FEED (Reels/TikTok style)
    ========================================================= */
 
+/* App area fills remaining screen below topbar */
 #appSection{
-  height: calc(100vh - 64px); /* full screen minus topbar */
+  height: calc(100vh - var(--topbarH));
 }
 
+/* Feed container is the scrollable snap viewport */
 .snapFeed{
   height: 100%;
   width: 100%;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch;
+
   background: #05060a;
 }
 
-/* each card = full page */
+/* Each route card is exactly 1 screen tall */
 .routeCard{
   height: 100%;
   width: 100%;
   position: relative;
   scroll-snap-align: start;
   scroll-snap-stop: always;
-  overflow:hidden;
-  background:#000;
+  overflow: hidden;
+  background: #000;
 }
 
-/* video fills entire page */
+/* Video full-bleed */
 .routeCard video{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-/* dark gradient for readable text */
+/* Gradient overlay for readability */
 .routeCard::after{
   content:"";
   position:absolute;
   inset:0;
   background:
-    linear-gradient(180deg, rgba(0,0,0,.05) 35%, rgba(0,0,0,.55) 75%, rgba(0,0,0,.78) 100%);
+    linear-gradient(180deg, rgba(0,0,0,.05) 35%,
+                          rgba(0,0,0,.55) 75%,
+                          rgba(0,0,0,.78) 100%);
   pointer-events:none;
 }
 
-/* text overlay */
+/* Text overlay bottom-left */
 .meta{
-  position:absolute;
-  left:16px;
-  right:16px;
-  bottom:18px;
-  z-index:3;
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 18px;
+  z-index: 3;
+
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap: 8px;
+
   text-shadow: 0 10px 25px rgba(0,0,0,.70);
 }
 
-.meta .titleLine{
-  font-size:24px;
-  font-weight:1000;
+/* Your JS uses: <div><b>grade</b> • location</div> then <div class="sub">... */
+.meta > div:first-child{
+  font-size: 24px;
+  font-weight: 1000;
+}
+.sub{
+  opacity: .85;
+  font-size: 14px;
+  color: rgba(244,245,255,.85);
 }
 
-.meta .subLine{
-  opacity:.85;
-  font-size:14px;
-}
-
-/* sent button on right */
+/* Sent button bottom-right */
 .sentBtn{
-  position:absolute;
-  right:16px;
-  bottom:18px;
-  z-index:4;
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  z-index: 4;
 
-  padding:10px 14px;
-  border-radius:999px;
+  padding: 10px 14px;
+  border-radius: 999px;
 
   background: rgba(0,0,0,.40);
   color: var(--text);
-  border:1px solid rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.14);
   box-shadow: 0 10px 26px rgba(0,0,0,.35);
   backdrop-filter: blur(10px);
-}
 
+  font-weight: 900;
+}
 .sentBtn:disabled{
   background: rgba(255,255,255,.10);
   color: rgba(244,245,255,.70);
+  border-color: rgba(255,255,255,.12);
 }
 
-/* message above button */
-.cardMsg{
-  position:absolute;
-  left:16px;
-  bottom:62px;
-  z-index:4;
+/* Mute button top-right (your JS class: .muteBtn) */
+.muteBtn{
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 4;
+
+  padding: 10px 12px;
+  border-radius: 999px;
+
+  background: rgba(0,0,0,.40);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 26px rgba(0,0,0,.25);
+  backdrop-filter: blur(10px);
+
+  font-weight: 900;
+}
+
+/* Small message text (your JS: <div class="msg small"></div>) */
+.routeCard .msg.small{
+  position: absolute;
+  left: 16px;
+  bottom: 62px;
+  z-index: 4;
+
+  margin: 0;
   color: rgba(240,210,91,.95);
   text-shadow: 0 10px 25px rgba(0,0,0,.70);
 }
-.soundBtn{
-  position:absolute;
-  right:16px;
-  top:16px;
-  z-index:4;
-  padding:10px 12px;
-  border-radius:999px;
-  background: rgba(0,0,0,.40);
-  color: var(--text);
-  border:1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(10px);
-}
 
-/* ---------- Upload Overlay ---------- */
+/* =========================================================
+   Upload Overlay
+   ========================================================= */
+
 .overlay{
-  position:fixed;
-  inset:0;
-  z-index:999;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
 }
 
+/* Backdrop */
 .overlayBackdrop{
-  position:absolute;
-  inset:0;
+  position: absolute;
+  inset: 0;
   background: rgba(0,0,0,.55);
   backdrop-filter: blur(10px);
 }
 
+/* Panel */
 .sharePanel{
-  position:absolute;
-  left:12px;
-  top:12px;
-  right:12px;
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  right: 12px;
   max-width: 520px;
   margin: 0 auto;
+
   border-radius: 22px;
   border: 1px solid rgba(255,255,255,.12);
   background: linear-gradient(180deg, rgba(20,22,40,.95), rgba(10,12,22,.90));
   box-shadow: 0 30px 90px rgba(0,0,0,.65);
 }
 
+/* Header */
 .shareHeader{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:14px 14px 10px;
+  padding: 14px 14px 10px;
   border-bottom: 1px solid rgba(255,255,255,.10);
 }
 
 .shareTitle{
-  font-size:18px;
-  font-weight:900;
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .closeBtn{
   background: rgba(255,255,255,.10);
   color: var(--text);
   border: 1px solid rgba(255,255,255,.12);
-  box-shadow:none;
-  padding:10px 12px;
+  box-shadow: none;
+  padding: 10px 12px;
   border-radius: 14px;
 }
 
-.shareBody{ padding:14px; }
+.shareBody{ padding: 14px; }
+
+/* Optional: slight mobile polish */
+@media (max-width: 420px){
+  .meta > div:first-child{ font-size: 22px; }
+}
