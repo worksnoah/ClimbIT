@@ -62,7 +62,14 @@ document.getElementById("btnUpload").onclick = uploadRoute;
 init();
 
 let scrollListenerSet = false;
+function scheduleWindowUpdate(){
+  clearTimeout(window.__scrollT);
+  window.__scrollT = setTimeout(updateActiveWindow, 80);
+}
 
+feedEl.addEventListener("scroll", scheduleWindowUpdate, { passive: true });
+feedEl.addEventListener("touchend", scheduleWindowUpdate, { passive: true });
+feedEl.addEventListener("wheel", scheduleWindowUpdate, { passive: true });
 async function init() {
   const { data: { session } } = await supabase.auth.getSession();
   await renderSession(session);
@@ -364,34 +371,38 @@ async function loadFeed() {
     feedEl.appendChild(card);
   }
   setTimeout(updateActiveWindow, 50);
+  requestAnimationFrame(() => {
+  feedEl.scrollTop = 0;   // optional: start at top
+  updateActiveWindow();
+});
+
 }
 function getClosestCardIndex(){
   const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
   if (!cards.length) return 0;
 
-  const mid = feedEl.scrollTop + feedEl.clientHeight / 2;
+  const feedRect = feedEl.getBoundingClientRect();
+  const targetY = feedRect.top + feedRect.height / 2;
 
   let best = 0;
   let bestDist = Infinity;
 
   for (let i = 0; i < cards.length; i++){
-    const c = cards[i];
-    const center = c.offsetTop + c.clientHeight / 2;
-    const d = Math.abs(center - mid);
-    if (d < bestDist){
-      bestDist = d;
-      best = i;
-    }
+    const r = cards[i].getBoundingClientRect();
+    const center = r.top + r.height / 2;
+    const d = Math.abs(center - targetY);
+    if (d < bestDist){ bestDist = d; best = i; }
   }
   return best;
 }
 
 function loadVideoEl(video){
   if (!video) return;
-  if (video.src) return; // already loaded
+  if (video.src) return;
   const url = video.dataset.src;
   if (!url) return;
 
+  video.preload = "metadata";
   video.src = url;
   video.load();
 }
@@ -412,7 +423,7 @@ function updateActiveWindow(){
   const active = getClosestCardIndex();
 
   // only keep active, prev, next
-  const keep = new Set([active - 1, active, active + 1]);
+  const keep = new Set([active - 2, active - 1, active, active + 1, active + 2]);
 
   cards.forEach((card, idx) => {
     const v = card.querySelector("video.clip");
@@ -420,6 +431,7 @@ function updateActiveWindow(){
 
     if (keep.has(idx)) {
       loadVideoEl(v);
+      v.preload = "metadata";
     } else {
       unloadVideoEl(v);
     }
