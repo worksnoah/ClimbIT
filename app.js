@@ -240,7 +240,9 @@ async function loadFeed() {
       uploader:users(username)
     `)
     .order("created_at", { ascending: false });
-
+  video.addEventListener("error", () => {
+    card.remove(); // hides rows whose video URL no longer works
+  });
   if (error) {
     feedEl.innerHTML = "Error loading feed: " + error.message;
     return;
