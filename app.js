@@ -186,7 +186,7 @@ async function uploadRoute() {
     // ✅ grade: integers only 0–14
     const gradeNum = Number(gradeEl.value);
     if (!Number.isInteger(gradeNum) || gradeNum < 0 || gradeNum > 14) {
-      uploadMsg.textContent = "Grade must be a number from 0 to 14.";
+      uploadMsg.textContent = "Grade must be from 0-14.";
       return;
     }
 
@@ -200,6 +200,12 @@ async function uploadRoute() {
       uploadMsg.textContent = "Not logged in.";
       return;
     }
+    await supabase.from("routes").insert({
+    video_url,
+    gradeNum: grade,   // number 0–14
+    location,
+    uploader_id: user.id
+    });
 
     // optional username set
     if (desiredUsername) {
