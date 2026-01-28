@@ -70,9 +70,10 @@ async function init() {
 
   // autoplay: whenever you stop scrolling, play the visible one
   feedEl.addEventListener("scroll", () => {
-    clearTimeout(window.__scrollT);
-    window.__scrollT = setTimeout(updateVisibleVideo, 120);
+  clearTimeout(window.__scrollT);
+  window.__scrollT = setTimeout(updateActiveWindow, 120);
   });
+
 }
 
 async function renderSession(session) {
@@ -266,7 +267,7 @@ async function loadFeed() {
     const card = document.createElement("div");
     card.className = "routeCard";
     card.innerHTML = `
-      <video class="clip" muted playsinline loop preload="metadata" src="${r.video_url}"></video>
+      <video class="clip" muted playsinline loop preload="none" data-src="${r.video_url}"></video>
 
       <div class="meta">
         <div><b>${r.grade}</b> • ${r.location}</div>
@@ -336,7 +337,83 @@ async function loadFeed() {
 
     feedEl.appendChild(card);
   }
+  setTimeout(updateActiveWindow, 50);
 }
+function getClosestCardIndex(){
+  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  if (!cards.length) return 0;
+
+  const mid = feedEl.scrollTop + feedEl.clientHeight / 2;
+
+  let best = 0;
+  let bestDist = Infinity;
+
+  for (let i = 0; i < cards.length; i++){
+    const c = cards[i];
+    const center = c.offsetTop + c.clientHeight / 2;
+    const d = Math.abs(center - mid);
+    if (d < bestDist){
+      bestDist = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+function loadVideoEl(video){
+  if (!video) return;
+  if (video.src) return; // already loaded
+  const url = video.dataset.src;
+  if (!url) return;
+
+  video.src = url;
+  video.load();
+}
+
+function unloadVideoEl(video){
+  if (!video) return;
+  if (!video.src) return;
+
+  video.pause();
+  video.removeAttribute("src");
+  video.load(); // releases resource in most browsers
+}
+
+function updateActiveWindow(){
+  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  if (!cards.length) return;
+
+  const active = getClosestCardIndex();
+
+  // only keep active, prev, next
+  const keep = new Set([active - 1, active, active + 1]);
+
+  cards.forEach((card, idx) => {
+    const v = card.querySelector("video.clip");
+    if (!v) return;
+
+    if (keep.has(idx)) {
+      loadVideoEl(v);
+    } else {
+      unloadVideoEl(v);
+    }
+  });
+
+  // autoplay active (muted) once it’s loaded
+  const activeVideo = cards[active]?.querySelector("video.clip");
+  if (activeVideo) {
+    loadVideoEl(activeVideo);
+    activeVideo.play().catch(()=>{});
+  }
+
+  // pause prev/next so only 1 plays
+  cards.forEach((card, idx) => {
+    if (idx === active) return;
+    const v = card.querySelector("video.clip");
+    if (v) v.pause();
+  });
+}
+
 
 // ====== Autoplay visible video ======
 function updateVisibleVideo() {
