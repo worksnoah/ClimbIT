@@ -54,8 +54,10 @@
 
       <div class="shareBody">
         <input id="username" placeholder="set username (first time)" />
+
         <div class="row">
-          <input id="grade" placeholder="Grade (ex: V5)" />
+          <!-- ✅ Numbers only, V0–V14 -->
+          <input id="grade" type="number" min="0" max="14" step="1" placeholder="V grade (0–14)" />
           <input id="location" placeholder="Gym / location" />
         </div>
 
