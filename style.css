@@ -265,6 +265,18 @@ button:disabled{
   color: rgba(240,210,91,.95);
   text-shadow: 0 10px 25px rgba(0,0,0,.70);
 }
+.soundBtn{
+  position:absolute;
+  right:16px;
+  top:16px;
+  z-index:4;
+  padding:10px 12px;
+  border-radius:999px;
+  background: rgba(0,0,0,.40);
+  color: var(--text);
+  border:1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(10px);
+}
 
 /* ---------- Upload Overlay ---------- */
 .overlay{
