@@ -257,6 +257,7 @@ async function loadFeed() {
     card.className = "routeCard";
     card.innerHTML = `
       <video muted playsinline loop preload="auto" src="${r.video_url}"></video>
+      <button class="soundBtn" aria-label="Toggle sound">🔇</button>
 
       <div class="meta">
         <div class="titleLine">${r.grade} • ${r.location}</div>
@@ -271,6 +272,21 @@ async function loadFeed() {
     `;
 
     const btn = card.querySelector(".sentBtn");
+    const video = card.querySelector("video");
+    const soundBtn = card.querySelector(".soundBtn");
+
+soundBtn.onclick = (e) => {
+  e.stopPropagation();
+  video.muted = !video.muted;
+  soundBtn.textContent = video.muted ? "🔇" : "🔊";
+};
+
+// optional: tap anywhere on video toggles sound
+video.addEventListener("click", () => {
+  video.muted = !video.muted;
+  soundBtn.textContent = video.muted ? "🔇" : "🔊";
+});
+
     const msg = card.querySelector(".cardMsg");
 
     btn.onclick = async () => {
