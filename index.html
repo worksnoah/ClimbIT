@@ -14,7 +14,10 @@
       <span class="plusIcon">+</span>
     </button>
 
-    <div class="brand">climbIT</div>
+    <div class="brand">
+      <span class="brand-climb">climb</span><span class="brand-i">I</span><span class="brand-t">T</span>
+    </div>
+
     <div id="userBox" class="userbox"></div>
   </header>
 
@@ -23,8 +26,9 @@
     <section id="authSection" class="card">
       <h2>Login / Signup</h2>
 
-      <input id="email" placeholder="email" type="email" />
-      <input id="password" placeholder="password" type="password" />
+      <input id="email" placeholder="email" type="email" autocomplete="email" />
+      <input id="password" placeholder="password" type="password" autocomplete="current-password" />
+      <input id="usernameSignup" placeholder="username (set once)" type="text" autocomplete="username" />
 
       <div class="row">
         <button id="btnSignup">Sign up</button>
@@ -37,6 +41,29 @@
 
     <!-- App -->
     <section id="appSection" class="hidden">
+      <div class="filterBar">
+        <div class="filterLabel">Filter</div>
+        <select id="gradeFilter" class="select">
+          <option value="ALL">All</option>
+          <option value="NR">NR</option>
+          <option value="0">V0</option>
+          <option value="1">V1</option>
+          <option value="2">V2</option>
+          <option value="3">V3</option>
+          <option value="4">V4</option>
+          <option value="5">V5</option>
+          <option value="6">V6</option>
+          <option value="7">V7</option>
+          <option value="8">V8</option>
+          <option value="9">V9</option>
+          <option value="10">V10</option>
+          <option value="11">V11</option>
+          <option value="12">V12</option>
+          <option value="13">V13</option>
+          <option value="14">V14</option>
+        </select>
+      </div>
+
       <!-- FULLSCREEN snap feed -->
       <div id="feed" class="snapFeed" aria-label="Climb feed"></div>
     </section>
@@ -53,11 +80,28 @@
       </div>
 
       <div class="shareBody">
-        <input id="username" placeholder="set username (first time)" />
+        <input id="problemName" placeholder="Problem name" />
 
         <div class="row">
-          <!-- ✅ Numbers only, V0–V14 -->
-          <input id="grade" type="number" min="0" max="14" step="1" placeholder="V grade (0–14)" />
+          <select id="gradeSelect" class="select">
+            <option value="NR">NR (not rated)</option>
+            <option value="0">V0</option>
+            <option value="1">V1</option>
+            <option value="2">V2</option>
+            <option value="3">V3</option>
+            <option value="4">V4</option>
+            <option value="5">V5</option>
+            <option value="6">V6</option>
+            <option value="7">V7</option>
+            <option value="8">V8</option>
+            <option value="9">V9</option>
+            <option value="10">V10</option>
+            <option value="11">V11</option>
+            <option value="12">V12</option>
+            <option value="13">V13</option>
+            <option value="14">V14</option>
+          </select>
+
           <input id="location" placeholder="Gym / location" />
         </div>
 
