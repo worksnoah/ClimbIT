@@ -1,10 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { FFmpeg } from "https://esm.sh/@ffmpeg/ffmpeg@0.12.6";
+import { fetchFile } from "https://esm.sh/@ffmpeg/util@0.12.6";
 
 // 1) PUT YOUR PROJECT VALUES HERE (Settings → API)
 const SUPABASE_URL = "https://ddwjotqwjiaovlwcwokx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkd2pvdHF3amlhb3Zsd2N3b2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NDMwMDYsImV4cCI6MjA4NTExOTAwNn0.JhufB9_M09PCgqiKCgQGL6a2dZ03xYcK0b0czjUSdIg"; // keep yours
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const ffmpeg = new FFmpeg();
+let ffmpegLoaded = false;
+
+async function loadFFmpeg(){
+  if (ffmpegLoaded) return;
+  await ffmpeg.load({
+    coreURL: "https://esm.sh/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js"
+  });
+  ffmpegLoaded = true;
+}
 
 // ====== DOM ======
 const authSection = document.getElementById("authSection");
