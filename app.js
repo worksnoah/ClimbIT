@@ -26,6 +26,41 @@ const videoEl = document.getElementById("video");
 
 const gradeFilterEl = document.getElementById("gradeFilter");
 
+const userMenuOverlay = document.getElementById("userMenuOverlay");
+const closeUserMenuBtn = document.getElementById("closeUserMenu");
+
+function openUserMenu() {
+  if (!userMenuOverlay) return;
+  userMenuOverlay.classList.remove("hidden");
+  requestAnimationFrame(() => userMenuOverlay.classList.add("show"));
+  const btn = document.getElementById("userMenuBtn");
+  if (btn) btn.setAttribute("aria-expanded", "true");
+
+  // hook logout
+  const logoutBtn = document.getElementById("btnLogout");
+  logoutBtn.onclick = () => supabase.auth.signOut();
+}
+
+function closeUserMenu() {
+  if (!userMenuOverlay) return;
+  userMenuOverlay.classList.remove("show");
+  setTimeout(() => userMenuOverlay.classList.add("hidden"), 200);
+  const btn = document.getElementById("userMenuBtn");
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+
+closeUserMenuBtn?.addEventListener("click", closeUserMenu);
+
+userMenuOverlay?.addEventListener("click", (e) => {
+  if (e.target.classList.contains("overlayBackdrop")) closeUserMenu();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && userMenuOverlay && !userMenuOverlay.classList.contains("hidden")) {
+    closeUserMenu();
+  }
+});
+
 // Upload overlay
 const openUploadBtn = document.getElementById("openUpload");
 const uploadOverlay = document.getElementById("uploadOverlay");
@@ -205,10 +240,13 @@ async function renderUserBox() {
     .single();
 
   userBox.innerHTML = `
-    <div class="pill">@${escapeHtml(profile.username)} • ${Number(profile.total_points)} pts</div>
-    <button id="btnLogout">Logout</button>
+    <button id="userMenuBtn" class="userPill" aria-haspopup="dialog" aria-expanded="false">
+      @${escapeHtml(profile.username)} • ${Number(profile.total_points || 0)} pts
+    </button>
   `;
-  document.getElementById("btnLogout").onclick = () => supabase.auth.signOut();
+
+  const btn = document.getElementById("userMenuBtn");
+  btn?.addEventListener("click", openUserMenu);
 }
 
 // ====== Upload ======
