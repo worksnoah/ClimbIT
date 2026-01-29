@@ -275,7 +275,26 @@ async function uploadClimb() {
   try {
     const problem_name = problemNameEl.value.trim();
     const location = locationEl.value.trim();
-    const file = videoEl.files[0];
+    let file = videoEl.files[0];
+
+await loadFFmpeg();
+
+uploadMsg.textContent = "Compressing video…";
+
+await ffmpeg.writeFile("input.mp4", await fetchFile(file));
+
+await ffmpeg.exec([
+  "-i", "input.mp4",
+  "-vcodec", "libx264",
+  "-crf", "28",
+  "-preset", "veryfast",
+  "-movflags", "+faststart",
+  "output.mp4"
+]);
+
+const data = await ffmpeg.readFile("output.mp4");
+
+file = new File([data.buffer], "compressed.mp4", { type: "video/mp4" });
 
     const gradeRaw = String(gradeSelectEl.value);
     const grade_num = (gradeRaw === "NR") ? null : Number(gradeRaw);
