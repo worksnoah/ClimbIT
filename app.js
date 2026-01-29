@@ -2,9 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // 1) PUT YOUR PROJECT VALUES HERE (Settings → API)
 const SUPABASE_URL = "https://ddwjotqwjiaovlwcwokx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkd2pvdHF3amlhb3Zsd2N3b2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NDMwMDYsImV4cCI6MjA4NTExOTAwNn0.JhufB9_M09PCgqiKCgQGL6a2dZ03xYcK0b0czjUSdIg"; // keep yours
-console.log("URL", SUPABASE_URL);
-console.log("KEY", SUPABASE_ANON_KEY.slice(0, 16));
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE"; // keep yours
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -13,16 +11,20 @@ const authSection = document.getElementById("authSection");
 const appSection = document.getElementById("appSection");
 const authMsg = document.getElementById("authMsg");
 const uploadMsg = document.getElementById("uploadMsg");
+
 const feedEl = document.getElementById("feed");
 const userBox = document.getElementById("userBox");
 
 const emailEl = document.getElementById("email");
 const passEl = document.getElementById("password");
+const usernameSignupEl = document.getElementById("usernameSignup");
 
-const usernameEl = document.getElementById("username");
-const gradeEl = document.getElementById("grade");
+const problemNameEl = document.getElementById("problemName");
+const gradeSelectEl = document.getElementById("gradeSelect");
 const locationEl = document.getElementById("location");
 const videoEl = document.getElementById("video");
+
+const gradeFilterEl = document.getElementById("gradeFilter");
 
 // Upload overlay
 const openUploadBtn = document.getElementById("openUpload");
@@ -31,6 +33,7 @@ const closeUploadBtn = document.getElementById("closeUpload");
 
 // ====== State ======
 let isUploading = false;
+let currentFilter = "ALL";
 
 // ====== Overlay open/close ======
 function openUpload() {
@@ -38,19 +41,15 @@ function openUpload() {
   uploadOverlay.classList.remove("hidden");
   requestAnimationFrame(() => uploadOverlay.classList.add("show"));
 }
-
 function closeUpload() {
   uploadOverlay.classList.remove("show");
   setTimeout(() => uploadOverlay.classList.add("hidden"), 200);
 }
-
 openUploadBtn?.addEventListener("click", openUpload);
 closeUploadBtn?.addEventListener("click", closeUpload);
-
 uploadOverlay?.addEventListener("click", (e) => {
   if (e.target.classList.contains("overlayBackdrop")) closeUpload();
 });
-
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && uploadOverlay && !uploadOverlay.classList.contains("hidden")) {
     closeUpload();
@@ -60,7 +59,16 @@ document.addEventListener("keydown", (e) => {
 // ====== Buttons ======
 document.getElementById("btnSignup").onclick = signup;
 document.getElementById("btnLogin").onclick = login;
-document.getElementById("btnUpload").onclick = uploadRoute;
+document.getElementById("btnUpload").onclick = uploadClimb;
+
+gradeFilterEl.addEventListener("change", async () => {
+  currentFilter = gradeFilterEl.value;
+  await loadFeed();
+  requestAnimationFrame(() => {
+    feedEl.scrollTop = 0;
+    updateActiveWindow();
+  });
+});
 
 // ====== Start ======
 init();
@@ -69,7 +77,6 @@ function scheduleWindowUpdate() {
   clearTimeout(window.__scrollT);
   window.__scrollT = setTimeout(updateActiveWindow, 90);
 }
-
 feedEl.addEventListener("scroll", scheduleWindowUpdate, { passive: true });
 feedEl.addEventListener("touchend", scheduleWindowUpdate, { passive: true });
 feedEl.addEventListener("wheel", scheduleWindowUpdate, { passive: true });
@@ -95,10 +102,10 @@ async function renderSession(session) {
   appSection.classList.remove("hidden");
 
   await ensureUserRow(session.user);
+  await applyPendingUsernameOnce();
   await renderUserBox();
   await loadFeed();
 
-  // start playing first visible
   requestAnimationFrame(() => {
     feedEl.scrollTop = 0;
     updateActiveWindow();
@@ -108,11 +115,33 @@ async function renderSession(session) {
 // ====== Auth ======
 async function signup() {
   authMsg.textContent = "";
+
   const email = emailEl.value.trim();
   const password = passEl.value;
+  const username = usernameSignupEl.value.trim();
+
+  if (!email || !password) {
+    authMsg.textContent = "Enter email and password.";
+    return;
+  }
+
+  if (!username) {
+    authMsg.textContent = "Pick a username (set once).";
+    return;
+  }
+
+  if (!isValidUsername(username)) {
+    authMsg.textContent = "Username: 3–20 chars, letters/numbers/_ only.";
+    return;
+  }
+
+  // Save for later (because email confirmation can delay having a session)
+  localStorage.setItem("pendingUsername", username);
 
   const { error } = await supabase.auth.signUp({ email, password });
-  authMsg.textContent = error ? error.message : "Check your email to confirm (if confirmations are on).";
+  authMsg.textContent = error
+    ? error.message
+    : "Signed up. Check your email if confirmations are on, then log in.";
 }
 
 async function login() {
@@ -124,7 +153,7 @@ async function login() {
   authMsg.textContent = error ? error.message : "";
 }
 
-// ====== Ensure user row exists ======
+// ====== Users ======
 async function ensureUserRow(user) {
   const { data: existing } = await supabase
     .from("users")
@@ -140,10 +169,29 @@ async function ensureUserRow(user) {
     id: user.id,
     email,
     username: "user_" + user.id.slice(0, 6),
+    username_locked: false,
     total_points: 0
   });
 
   if (error) console.log("ensureUserRow error:", error.message);
+}
+
+async function applyPendingUsernameOnce() {
+  const pending = (localStorage.getItem("pendingUsername") || "").trim();
+  if (!pending) return;
+
+  // Try RPC that locks username
+  const { error } = await supabase.rpc("set_username_once", { p_username: pending });
+
+  if (!error) {
+    localStorage.removeItem("pendingUsername");
+    usernameSignupEl.value = "";
+  } else {
+    // If it fails because already set, stop retrying
+    if ((error.message || "").toLowerCase().includes("already set")) {
+      localStorage.removeItem("pendingUsername");
+    }
+  }
 }
 
 async function renderUserBox() {
@@ -157,18 +205,14 @@ async function renderUserBox() {
     .single();
 
   userBox.innerHTML = `
-    <div class="pill">@${profile.username} • ${profile.total_points} pts</div>
+    <div class="pill">@${escapeHtml(profile.username)} • ${Number(profile.total_points)} pts</div>
     <button id="btnLogout">Logout</button>
   `;
   document.getElementById("btnLogout").onclick = () => supabase.auth.signOut();
 }
 
-// ====== Upload (adds points on upload) ======
-// IMPORTANT: Create this SQL function in Supabase (SQL editor):
-// create or replace function log_upload(p_user uuid) returns void language sql as $$
-//   update users set total_points = total_points + 1 where id = p_user;
-// $$;
-async function uploadRoute() {
+// ====== Upload ======
+async function uploadClimb() {
   if (isUploading) return;
   isUploading = true;
 
@@ -179,19 +223,27 @@ async function uploadRoute() {
   uploadMsg.textContent = "";
 
   try {
+    const problem_name = problemNameEl.value.trim();
     const location = locationEl.value.trim();
     const file = videoEl.files[0];
-    const desiredUsername = usernameEl.value.trim();
 
-    // ✅ grade: integers only 0–14
-    const gradeNum = Number(gradeEl.value);
-    if (!Number.isInteger(gradeNum) || gradeNum < 0 || gradeNum > 14) {
-      uploadMsg.textContent = "Grade must be from 0-14.";
+    const gradeRaw = String(gradeSelectEl.value);
+    const grade_num = (gradeRaw === "NR") ? null : Number(gradeRaw);
+
+    if (!problem_name) {
+      uploadMsg.textContent = "Add a problem name.";
       return;
     }
-
-    if (!location || !file) {
-      uploadMsg.textContent = "Add location and a video file.";
+    if (!location) {
+      uploadMsg.textContent = "Add a location.";
+      return;
+    }
+    if (!file) {
+      uploadMsg.textContent = "Choose a video file.";
+      return;
+    }
+    if (grade_num !== null && (!Number.isInteger(grade_num) || grade_num < 0 || grade_num > 14)) {
+      uploadMsg.textContent = "Grade must be NR or V0–V14.";
       return;
     }
 
@@ -200,19 +252,8 @@ async function uploadRoute() {
       uploadMsg.textContent = "Not logged in.";
       return;
     }
-    await supabase.from("routes").insert({
-    video_url,
-    gradeNum: grade,   // number 0–14
-    location,
-    uploader_id: user.id
-    });
 
-    // optional username set
-    if (desiredUsername) {
-      await supabase.from("users").update({ username: desiredUsername }).eq("id", user.id);
-    }
-
-    // 1) Upload video
+    // 1) Upload video to storage
     const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
     const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
@@ -234,10 +275,11 @@ async function uploadRoute() {
 
     const video_url = pub.publicUrl;
 
-    // 3) Insert route row (grade stored as number)
+    // 3) Insert DB row
     const { error: dbErr } = await supabase.from("routes").insert({
       video_url,
-      grade: gradeNum,
+      problem_name,
+      grade_num,     // int 0–14 OR null for NR
       location,
       uploader_id: user.id
     });
@@ -247,29 +289,19 @@ async function uploadRoute() {
       return;
     }
 
-    // 4) ✅ Add points ON UPLOAD (server-side function)
-    const { error: ptsErr } = await supabase.rpc("log_upload", { p_user: user.id });
-    if (ptsErr) {
-      // still uploaded fine; just show warning
-      console.log("log_upload error:", ptsErr.message);
-    }
-
-    uploadMsg.textContent = "Uploaded! +1 point";
+    uploadMsg.textContent = "Uploaded!";
 
     // clear form
-    gradeEl.value = "";
+    problemNameEl.value = "";
     locationEl.value = "";
     videoEl.value = "";
+    gradeSelectEl.value = "NR";
 
-    // refresh UI + feed
     await renderUserBox();
     await loadFeed();
 
-    // reset feed to top and play first
     feedEl.scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => updateActiveWindow(), 200);
-
-    // close overlay after a beat
     setTimeout(() => closeUpload(), 350);
   } finally {
     isUploading = false;
@@ -278,21 +310,30 @@ async function uploadRoute() {
   }
 }
 
-// ====== Feed (NO send button) ======
+// ====== Feed ======
 async function loadFeed() {
   feedEl.innerHTML = "Loading…";
 
-  const { data: routes, error } = await supabase
+  let q = supabase
     .from("routes")
     .select(`
       id,
       video_url,
-      grade,
+      problem_name,
+      grade_num,
       location,
       created_at,
       uploader:users(username)
     `)
     .order("created_at", { ascending: false });
+
+  if (currentFilter === "NR") {
+    q = q.is("grade_num", null);
+  } else if (currentFilter !== "ALL") {
+    q = q.eq("grade_num", Number(currentFilter));
+  }
+
+  const { data: routes, error } = await q;
 
   if (error) {
     feedEl.innerHTML = "Error loading feed: " + error.message;
@@ -301,16 +342,23 @@ async function loadFeed() {
 
   feedEl.innerHTML = "";
 
-  for (const r of routes) {
+  for (const r of (routes || [])) {
     const card = document.createElement("div");
     card.className = "routeCard";
 
+    const gradeLabel = (r.grade_num === null || r.grade_num === undefined)
+      ? "NR"
+      : `V${Number(r.grade_num)}`;
+
     card.innerHTML = `
-      <video class="clip" muted playsinline loop preload="none" data-src="${r.video_url}"></video>
+      <video class="clip" muted playsinline loop preload="none" data-src="${escapeAttr(r.video_url)}"></video>
 
       <div class="meta">
-        <div class="titleLine"><b>V${Number(r.grade)}</b> • ${escapeHtml(r.location)}</div>
-        <div class="subLine">uploaded by @${escapeHtml(r.uploader?.username ?? "unknown")}</div>
+        <div class="titleLine">
+          <span class="badge">${gradeLabel}</span>
+          <span class="problem">${escapeHtml(r.problem_name)}</span>
+        </div>
+        <div class="subLine">${escapeHtml(r.location)} • @${escapeHtml(r.uploader?.username ?? "unknown")}</div>
       </div>
 
       <button class="muteBtn" aria-label="Mute/unmute">🔇</button>
@@ -319,15 +367,10 @@ async function loadFeed() {
     const video = card.querySelector("video.clip");
     const muteBtn = card.querySelector(".muteBtn");
 
-    // If the URL is dead, remove it (prevents ghost rows)
-    video.addEventListener("error", () => {
-      card.remove();
-    });
+    video.addEventListener("error", () => card.remove());
 
-    // Play/pause on tap (except mute button)
     card.addEventListener("click", async (e) => {
       if (e.target.closest(".muteBtn")) return;
-
       if (video.paused) {
         try { await video.play(); } catch {}
       } else {
@@ -335,7 +378,6 @@ async function loadFeed() {
       }
     });
 
-    // Mute toggle
     function syncMuteIcon() {
       muteBtn.textContent = video.muted ? "🔇" : "🔊";
     }
@@ -351,7 +393,6 @@ async function loadFeed() {
     feedEl.appendChild(card);
   }
 
-  // Ensure active window loads after render
   setTimeout(updateActiveWindow, 60);
 }
 
@@ -401,26 +442,21 @@ function updateActiveWindow() {
   if (!cards.length) return;
 
   const active = getClosestCardIndex();
-
-  // keep active ±2 (fast + reliable)
   const keep = new Set([active - 2, active - 1, active, active + 1, active + 2]);
 
   cards.forEach((card, idx) => {
     const v = card.querySelector("video.clip");
     if (!v) return;
-
     if (keep.has(idx)) loadVideoEl(v);
     else unloadVideoEl(v);
   });
 
-  // autoplay only active
   const activeVideo = cards[active]?.querySelector("video.clip");
   if (activeVideo) {
     loadVideoEl(activeVideo);
     activeVideo.play().catch(() => {});
   }
 
-  // pause all others
   cards.forEach((card, idx) => {
     if (idx === active) return;
     const v = card.querySelector("video.clip");
@@ -429,6 +465,10 @@ function updateActiveWindow() {
 }
 
 // ====== Helpers ======
+function isValidUsername(u) {
+  if (u.length < 3 || u.length > 20) return false;
+  return /^[a-zA-Z0-9_]+$/.test(u);
+}
 function escapeHtml(str) {
   return String(str ?? "")
     .replaceAll("&", "&amp;")
@@ -436,4 +476,8 @@ function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+function escapeAttr(str) {
+  // enough for attributes like src/data-src
+  return String(str ?? "").replaceAll('"', "&quot;");
 }
