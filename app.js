@@ -1,22 +1,48 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { FFmpeg } from "https://esm.sh/@ffmpeg/ffmpeg@0.12.6";
-import { fetchFile } from "https://esm.sh/@ffmpeg/util@0.12.6";
+
+// ✅ Lazy-load FFmpeg ONLY when uploading (so login never depends on FFmpeg)
+async function getFFmpeg() {
+  const { FFmpeg } = await import("https://esm.sh/@ffmpeg/ffmpeg@0.12.6");
+  const { fetchFile } = await import("https://esm.sh/@ffmpeg/util@0.12.6");
+  const ffmpeg = new FFmpeg();
+  let loaded = false;
+
+  return {
+    async compressToMp4(file) {
+      if (!loaded) {
+        await ffmpeg.load({
+          coreURL: "https://esm.sh/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js",
+        });
+        loaded = true;
+      }
+
+      await ffmpeg.writeFile("input", await fetchFile(file));
+
+      // Simple + reliable mobile-ish compression
+      // - CRF 28 = decent compression
+      // - scale down to max 720p (keeps uploads sane)
+      await ffmpeg.exec([
+        "-i", "input",
+        "-vf", "scale='min(1280,iw)':-2",
+        "-vcodec", "libx264",
+        "-crf", "28",
+        "-preset", "veryfast",
+        "-movflags", "+faststart",
+        "output.mp4",
+      ]);
+
+      const data = await ffmpeg.readFile("output.mp4");
+      return new File([data.buffer], "compressed.mp4", { type: "video/mp4" });
+    },
+  };
+}
 
 // 1) PUT YOUR PROJECT VALUES HERE (Settings → API)
 const SUPABASE_URL = "https://ddwjotqwjiaovlwcwokx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkd2pvdHF3amlhb3Zsd2N3b2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NDMwMDYsImV4cCI6MjA4NTExOTAwNn0.JhufB9_M09PCgqiKCgQGL6a2dZ03xYcK0b0czjUSdIg"; // keep yours
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkd2pvdHF3amlhb3Zsd2N3b2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NDMwMDYsImV4cCI6MjA4NTExOTAwNn0.JhufB9_M09PCgqiKCgQGL6a2dZ03xYcK0b0czjUSdIg";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const ffmpeg = new FFmpeg();
-let ffmpegLoaded = false;
-
-async function loadFFmpeg(){
-  if (ffmpegLoaded) return;
-  await ffmpeg.load({
-    coreURL: "https://esm.sh/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js"
-  });
-  ffmpegLoaded = true;
-}
 
 // ====== DOM ======
 const authSection = document.getElementById("authSection");
@@ -29,7 +55,7 @@ const userBox = document.getElementById("userBox");
 
 const emailEl = document.getElementById("email");
 const passEl = document.getElementById("password");
-const usernameSignupEl = document.getElementById("usernameSignup");
+const usernameSignupEl = document.getElementById("usernameSignup"); // may be null if you removed it
 
 const problemNameEl = document.getElementById("problemName");
 const gradeSelectEl = document.getElementById("gradeSelect");
@@ -41,38 +67,6 @@ const gradeFilterEl = document.getElementById("gradeFilter");
 const userMenuOverlay = document.getElementById("userMenuOverlay");
 const closeUserMenuBtn = document.getElementById("closeUserMenu");
 
-function openUserMenu() {
-  if (!userMenuOverlay) return;
-  userMenuOverlay.classList.remove("hidden");
-  requestAnimationFrame(() => userMenuOverlay.classList.add("show"));
-  const btn = document.getElementById("userMenuBtn");
-  if (btn) btn.setAttribute("aria-expanded", "true");
-
-  // hook logout
-  const logoutBtn = document.getElementById("btnLogout");
-  logoutBtn.onclick = () => supabase.auth.signOut();
-}
-
-function closeUserMenu() {
-  if (!userMenuOverlay) return;
-  userMenuOverlay.classList.remove("show");
-  setTimeout(() => userMenuOverlay.classList.add("hidden"), 200);
-  const btn = document.getElementById("userMenuBtn");
-  if (btn) btn.setAttribute("aria-expanded", "false");
-}
-
-closeUserMenuBtn?.addEventListener("click", closeUserMenu);
-
-userMenuOverlay?.addEventListener("click", (e) => {
-  if (e.target.classList.contains("overlayBackdrop")) closeUserMenu();
-});
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && userMenuOverlay && !userMenuOverlay.classList.contains("hidden")) {
-    closeUserMenu();
-  }
-});
-
 // Upload overlay
 const openUploadBtn = document.getElementById("openUpload");
 const uploadOverlay = document.getElementById("uploadOverlay");
@@ -82,122 +76,184 @@ const closeUploadBtn = document.getElementById("closeUpload");
 let isUploading = false;
 let currentFilter = "ALL";
 
-// ====== Overlay open/close ======
+// ====== Safe attach helper ======
+function on(id, event, handler) {
+  const el = typeof id === "string" ? document.getElementById(id) : id;
+  if (!el) return;
+  el.addEventListener(event, handler);
+  return el;
+}
+
+// ====== User menu overlay ======
+function openUserMenu() {
+  if (!userMenuOverlay) return;
+  userMenuOverlay.classList.remove("hidden");
+  requestAnimationFrame(() => userMenuOverlay.classList.add("show"));
+
+  const btn = document.getElementById("userMenuBtn");
+  btn?.setAttribute("aria-expanded", "true");
+
+  const logoutBtn = document.getElementById("btnLogout");
+  if (logoutBtn) logoutBtn.onclick = () => supabase.auth.signOut();
+}
+
+function closeUserMenu() {
+  if (!userMenuOverlay) return;
+  userMenuOverlay.classList.remove("show");
+  setTimeout(() => userMenuOverlay.classList.add("hidden"), 200);
+
+  const btn = document.getElementById("userMenuBtn");
+  btn?.setAttribute("aria-expanded", "false");
+}
+
+on(closeUserMenuBtn, "click", closeUserMenu);
+
+on(userMenuOverlay, "click", (e) => {
+  if (e.target.classList?.contains("overlayBackdrop")) closeUserMenu();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && userMenuOverlay && !userMenuOverlay.classList.contains("hidden")) {
+    closeUserMenu();
+  }
+});
+
+// ====== Upload overlay open/close ======
 function openUpload() {
-  uploadMsg.textContent = "";
-  uploadOverlay.classList.remove("hidden");
-  requestAnimationFrame(() => uploadOverlay.classList.add("show"));
+  if (uploadMsg) uploadMsg.textContent = "";
+  uploadOverlay?.classList.remove("hidden");
+  requestAnimationFrame(() => uploadOverlay?.classList.add("show"));
 }
 function closeUpload() {
-  uploadOverlay.classList.remove("show");
-  setTimeout(() => uploadOverlay.classList.add("hidden"), 200);
+  uploadOverlay?.classList.remove("show");
+  setTimeout(() => uploadOverlay?.classList.add("hidden"), 200);
 }
-openUploadBtn?.addEventListener("click", openUpload);
-closeUploadBtn?.addEventListener("click", closeUpload);
-uploadOverlay?.addEventListener("click", (e) => {
-  if (e.target.classList.contains("overlayBackdrop")) closeUpload();
+
+on(openUploadBtn, "click", openUpload);
+on(closeUploadBtn, "click", closeUpload);
+
+on(uploadOverlay, "click", (e) => {
+  if (e.target.classList?.contains("overlayBackdrop")) closeUpload();
 });
+
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && uploadOverlay && !uploadOverlay.classList.contains("hidden")) {
     closeUpload();
   }
 });
 
-// ====== Buttons ======
-document.getElementById("btnSignup").onclick = signup;
-document.getElementById("btnLogin").onclick = login;
-document.getElementById("btnUpload").onclick = uploadClimb;
+// ====== Buttons (safe) ======
+const btnSignup = document.getElementById("btnSignup");
+if (btnSignup) btnSignup.onclick = signup;
 
-gradeFilterEl.addEventListener("change", async () => {
+const btnLogin = document.getElementById("btnLogin");
+if (btnLogin) btnLogin.onclick = login;
+
+const btnUpload = document.getElementById("btnUpload");
+if (btnUpload) btnUpload.onclick = uploadClimb;
+
+// Grade filter (safe)
+gradeFilterEl?.addEventListener("change", async () => {
   currentFilter = gradeFilterEl.value;
   await loadFeed();
   requestAnimationFrame(() => {
-    feedEl.scrollTop = 0;
+    if (feedEl) feedEl.scrollTop = 0;
     updateActiveWindow();
   });
 });
 
-// ====== Start ======
-init();
-
+// Feed scroll (safe)
 function scheduleWindowUpdate() {
   clearTimeout(window.__scrollT);
   window.__scrollT = setTimeout(updateActiveWindow, 90);
 }
-feedEl.addEventListener("scroll", scheduleWindowUpdate, { passive: true });
-feedEl.addEventListener("touchend", scheduleWindowUpdate, { passive: true });
-feedEl.addEventListener("wheel", scheduleWindowUpdate, { passive: true });
+feedEl?.addEventListener("scroll", scheduleWindowUpdate, { passive: true });
+feedEl?.addEventListener("touchend", scheduleWindowUpdate, { passive: true });
+feedEl?.addEventListener("wheel", scheduleWindowUpdate, { passive: true });
+
+// ====== Start ======
+init();
 
 async function init() {
+  // If your script was crashing, you’ll never see this
+  console.log("app.js loaded OK");
+
   const { data: { session } } = await supabase.auth.getSession();
   await renderSession(session);
 
-  supabase.auth.onAuthStateChange(async (_event, session) => {
-    await renderSession(session);
+  supabase.auth.onAuthStateChange(async (_event, session2) => {
+    await renderSession(session2);
   });
 }
 
 async function renderSession(session) {
   if (!session) {
-    authSection.classList.remove("hidden");
-    appSection.classList.add("hidden");
-    userBox.innerHTML = "";
+    authSection?.classList.remove("hidden");
+    appSection?.classList.add("hidden");
+    if (userBox) userBox.innerHTML = "";
     return;
   }
 
-  authSection.classList.add("hidden");
-  appSection.classList.remove("hidden");
+  authSection?.classList.add("hidden");
+  appSection?.classList.remove("hidden");
 
   await ensureUserRow(session.user);
-  await applyPendingUsernameOnce();
+  await applyPendingUsernameOnce(); // only runs if pending username exists
   await renderUserBox();
   await loadFeed();
 
   requestAnimationFrame(() => {
-    feedEl.scrollTop = 0;
+    if (feedEl) feedEl.scrollTop = 0;
     updateActiveWindow();
   });
 }
 
 // ====== Auth ======
 async function signup() {
-  authMsg.textContent = "";
+  if (authMsg) authMsg.textContent = "";
 
-  const email = emailEl.value.trim();
-  const password = passEl.value;
-  const username = usernameSignupEl.value.trim();
+  const email = (emailEl?.value || "").trim();
+  const password = passEl?.value || "";
+  const username = (usernameSignupEl?.value || "").trim(); // ✅ safe even if field is missing
 
   if (!email || !password) {
-    authMsg.textContent = "Enter email and password.";
+    if (authMsg) authMsg.textContent = "Enter email and password.";
+    return;
+  }
+
+  // If you removed usernameSignup from HTML, this will force you to add it back (good)
+  if (!usernameSignupEl) {
+    if (authMsg) authMsg.textContent = "Missing username input (id='usernameSignup') in HTML.";
     return;
   }
 
   if (!username) {
-    authMsg.textContent = "Pick a username (set once).";
+    if (authMsg) authMsg.textContent = "Pick a username (set once).";
     return;
   }
-
   if (!isValidUsername(username)) {
-    authMsg.textContent = "Username: 3–20 chars, letters/numbers/_ only.";
+    if (authMsg) authMsg.textContent = "Username: 3–20 chars, letters/numbers/_ only.";
     return;
   }
 
-  // Save for later (because email confirmation can delay having a session)
   localStorage.setItem("pendingUsername", username);
 
   const { error } = await supabase.auth.signUp({ email, password });
-  authMsg.textContent = error
-    ? error.message
-    : "Signed up. Check your email if confirmations are on, then log in.";
+  if (authMsg) {
+    authMsg.textContent = error
+      ? error.message
+      : "Signed up. Check your email if confirmations are on, then log in.";
+  }
 }
 
 async function login() {
-  authMsg.textContent = "";
-  const email = emailEl.value.trim();
-  const password = passEl.value;
+  if (authMsg) authMsg.textContent = "";
+
+  const email = (emailEl?.value || "").trim();
+  const password = passEl?.value || "";
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  authMsg.textContent = error ? error.message : "";
+  if (authMsg) authMsg.textContent = error ? error.message : "";
 }
 
 // ====== Users ======
@@ -217,7 +273,7 @@ async function ensureUserRow(user) {
     email,
     username: "user_" + user.id.slice(0, 6),
     username_locked: false,
-    total_points: 0
+    total_points: 0,
   });
 
   if (error) console.log("ensureUserRow error:", error.message);
@@ -227,15 +283,14 @@ async function applyPendingUsernameOnce() {
   const pending = (localStorage.getItem("pendingUsername") || "").trim();
   if (!pending) return;
 
-  // Try RPC that locks username
   const { error } = await supabase.rpc("set_username_once", { p_username: pending });
 
   if (!error) {
     localStorage.removeItem("pendingUsername");
-    usernameSignupEl.value = "";
+    if (usernameSignupEl) usernameSignupEl.value = "";
   } else {
-    // If it fails because already set, stop retrying
-    if ((error.message || "").toLowerCase().includes("already set")) {
+    const msg = (error.message || "").toLowerCase();
+    if (msg.includes("already") || msg.includes("locked")) {
       localStorage.removeItem("pendingUsername");
     }
   }
@@ -243,13 +298,18 @@ async function applyPendingUsernameOnce() {
 
 async function renderUserBox() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user || !userBox) return;
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("users")
     .select("username,total_points")
     .eq("id", user.id)
     .single();
+
+  if (error) {
+    userBox.innerHTML = "";
+    return;
+  }
 
   userBox.innerHTML = `
     <button id="userMenuBtn" class="userPill" aria-haspopup="dialog" aria-expanded="false">
@@ -257,8 +317,7 @@ async function renderUserBox() {
     </button>
   `;
 
-  const btn = document.getElementById("userMenuBtn");
-  btn?.addEventListener("click", openUserMenu);
+  document.getElementById("userMenuBtn")?.addEventListener("click", openUserMenu);
 }
 
 // ====== Upload ======
@@ -266,60 +325,52 @@ async function uploadClimb() {
   if (isUploading) return;
   isUploading = true;
 
-  const uploadBtn = document.getElementById("btnUpload");
-  uploadBtn.disabled = true;
-  const oldBtnText = uploadBtn.textContent;
-  uploadBtn.textContent = "Uploading…";
-  uploadMsg.textContent = "";
+  const uploadBtnEl = document.getElementById("btnUpload");
+  if (uploadBtnEl) uploadBtnEl.disabled = true;
+
+  const oldBtnText = uploadBtnEl ? uploadBtnEl.textContent : "Upload";
+  if (uploadBtnEl) uploadBtnEl.textContent = "Uploading…";
+  if (uploadMsg) uploadMsg.textContent = "";
 
   try {
-    const problem_name = problemNameEl.value.trim();
-    const location = locationEl.value.trim();
-    let file = videoEl.files[0];
+    const problem_name = (problemNameEl?.value || "").trim();
+    const location = (locationEl?.value || "").trim();
+    let file = videoEl?.files?.[0] || null;
 
-await loadFFmpeg();
-
-uploadMsg.textContent = "Compressing video…";
-
-await ffmpeg.writeFile("input.mp4", await fetchFile(file));
-
-await ffmpeg.exec([
-  "-i", "input.mp4",
-  "-vcodec", "libx264",
-  "-crf", "28",
-  "-preset", "veryfast",
-  "-movflags", "+faststart",
-  "output.mp4"
-]);
-
-const data = await ffmpeg.readFile("output.mp4");
-
-file = new File([data.buffer], "compressed.mp4", { type: "video/mp4" });
-
-    const gradeRaw = String(gradeSelectEl.value);
-    const grade_num = (gradeRaw === "NR") ? null : Number(gradeRaw);
+    const gradeRaw = String(gradeSelectEl?.value ?? "NR");
+    const grade_num = gradeRaw === "NR" ? null : Number(gradeRaw);
 
     if (!problem_name) {
-      uploadMsg.textContent = "Add a problem name.";
+      if (uploadMsg) uploadMsg.textContent = "Add a problem name.";
       return;
     }
     if (!location) {
-      uploadMsg.textContent = "Add a location.";
+      if (uploadMsg) uploadMsg.textContent = "Add a location.";
       return;
     }
     if (!file) {
-      uploadMsg.textContent = "Choose a video file.";
+      if (uploadMsg) uploadMsg.textContent = "Choose a video file.";
       return;
     }
     if (grade_num !== null && (!Number.isInteger(grade_num) || grade_num < 0 || grade_num > 14)) {
-      uploadMsg.textContent = "Grade must be NR or V0–V14.";
+      if (uploadMsg) uploadMsg.textContent = "Grade must be NR or V0–V14.";
       return;
     }
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      uploadMsg.textContent = "Not logged in.";
+      if (uploadMsg) uploadMsg.textContent = "Not logged in.";
       return;
+    }
+
+    // ✅ Compress (optional). If FFmpeg fails, fall back to original file.
+    try {
+      if (uploadMsg) uploadMsg.textContent = "Compressing video…";
+      const ff = await getFFmpeg();
+      file = await ff.compressToMp4(file);
+    } catch (e) {
+      console.log("FFmpeg compression failed, uploading original:", e);
+      if (uploadMsg) uploadMsg.textContent = "Uploading original video…";
     }
 
     // 1) Upload video to storage
@@ -332,54 +383,52 @@ file = new File([data.buffer], "compressed.mp4", { type: "video/mp4" });
       .upload(filePath, file, { contentType: file.type, upsert: false });
 
     if (upErr) {
-      uploadMsg.textContent = "Upload failed: " + upErr.message;
+      if (uploadMsg) uploadMsg.textContent = "Upload failed: " + upErr.message;
       return;
     }
 
     // 2) Public URL
-    const { data: pub } = supabase
-      .storage
-      .from("route-videos")
-      .getPublicUrl(filePath);
-
+    const { data: pub } = supabase.storage.from("route-videos").getPublicUrl(filePath);
     const video_url = pub.publicUrl;
 
-   const { error: dbErr } = await supabase.from("routes").insert({
-  video_url: video_url,
-  grade: gradeNum,          // ✅ must match DB column name
-  location: location,
-  uploader_id: user.id
-  });
-
+    // ✅ IMPORTANT: insert column names that match your FEED query (problem_name, grade_num)
+    const { error: dbErr } = await supabase.from("routes").insert({
+      video_url,
+      problem_name,
+      grade_num,     // can be null for NR
+      location,
+      uploader_id: user.id,
+    });
 
     if (dbErr) {
-      uploadMsg.textContent = "DB insert failed: " + dbErr.message;
+      if (uploadMsg) uploadMsg.textContent = "DB insert failed: " + dbErr.message;
       return;
     }
 
-    uploadMsg.textContent = "Uploaded!";
+    if (uploadMsg) uploadMsg.textContent = "Uploaded!";
 
     // clear form
-    problemNameEl.value = "";
-    locationEl.value = "";
-    videoEl.value = "";
-    gradeSelectEl.value = "NR";
+    if (problemNameEl) problemNameEl.value = "";
+    if (locationEl) locationEl.value = "";
+    if (videoEl) videoEl.value = "";
+    if (gradeSelectEl) gradeSelectEl.value = "NR";
 
     await renderUserBox();
     await loadFeed();
 
-    feedEl.scrollTo({ top: 0, behavior: "smooth" });
+    feedEl?.scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => updateActiveWindow(), 200);
     setTimeout(() => closeUpload(), 350);
   } finally {
     isUploading = false;
-    uploadBtn.disabled = false;
-    uploadBtn.textContent = oldBtnText;
+    if (uploadBtnEl) uploadBtnEl.disabled = false;
+    if (uploadBtnEl) uploadBtnEl.textContent = oldBtnText;
   }
 }
 
 // ====== Feed ======
 async function loadFeed() {
+  if (!feedEl) return;
   feedEl.innerHTML = "Loading…";
 
   let q = supabase
@@ -414,9 +463,8 @@ async function loadFeed() {
     const card = document.createElement("div");
     card.className = "routeCard";
 
-    const gradeLabel = (r.grade_num === null || r.grade_num === undefined)
-      ? "NR"
-      : `V${Number(r.grade_num)}`;
+    const gradeLabel =
+      r.grade_num === null || r.grade_num === undefined ? "NR" : `V${Number(r.grade_num)}`;
 
     card.innerHTML = `
       <video class="clip" muted playsinline loop preload="none" data-src="${escapeAttr(r.video_url)}"></video>
@@ -466,7 +514,7 @@ async function loadFeed() {
 
 // ====== Lazy-load window: keep only nearby videos loaded ======
 function getClosestCardIndex() {
-  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  const cards = Array.from(feedEl?.querySelectorAll(".routeCard") || []);
   if (!cards.length) return 0;
 
   const feedRect = feedEl.getBoundingClientRect();
@@ -479,7 +527,10 @@ function getClosestCardIndex() {
     const r = cards[i].getBoundingClientRect();
     const center = r.top + r.height / 2;
     const d = Math.abs(center - targetY);
-    if (d < bestDist) { bestDist = d; best = i; }
+    if (d < bestDist) {
+      bestDist = d;
+      best = i;
+    }
   }
   return best;
 }
@@ -506,7 +557,7 @@ function unloadVideoEl(video) {
 }
 
 function updateActiveWindow() {
-  const cards = Array.from(feedEl.querySelectorAll(".routeCard"));
+  const cards = Array.from(feedEl?.querySelectorAll(".routeCard") || []);
   if (!cards.length) return;
 
   const active = getClosestCardIndex();
@@ -546,6 +597,5 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 function escapeAttr(str) {
-  // enough for attributes like src/data-src
   return String(str ?? "").replaceAll('"', "&quot;");
 }
