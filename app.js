@@ -344,14 +344,13 @@ file = new File([data.buffer], "compressed.mp4", { type: "video/mp4" });
 
     const video_url = pub.publicUrl;
 
-    // 3) Insert DB row
-    const { error: dbErr } = await supabase.from("routes").insert({
-      video_url,
-      problem_name,
-      grade_num,     // int 0–14 OR null for NR
-      location,
-      uploader_id: user.id
-    });
+   const { error: dbErr } = await supabase.from("routes").insert({
+  video_url: video_url,
+  grade: gradeNum,          // ✅ must match DB column name
+  location: location,
+  uploader_id: user.id
+  });
+
 
     if (dbErr) {
       uploadMsg.textContent = "DB insert failed: " + dbErr.message;
