@@ -1,14 +1,10 @@
 /* =========================================================
-   climbIT MVP — FULL CSS (clean + consistent with your JS)
+   climbIT — style.css (teal + navy theme)
    - Full-screen snap feed (1 video per screen)
-   - Click video to play/pause
-   - Mute button stays top-right (class: .muteBtn)
-   - Sent button bottom-right (class: .sentBtn)
-   - Message text uses your JS: <div class="msg small"></div>
-   - Upload overlay + top-left plus button
+   - Sticky topbar + sticky filter bar
+   - Upload overlay modal
    ========================================================= */
 
-/* ---------- Theme ---------- */
 :root{
   --bg0:#07080c;
   --bg1:#0b0d14;
@@ -20,91 +16,82 @@
   --stroke2: rgba(255,255,255,.14);
 
   --text:#f4f5ff;
-  --muted: rgba(244,245,255,.75);
+  --muted: rgba(244,245,255,.78);
   --muted2: rgba(244,245,255,.55);
 
-  --gold:#f0d25b;
-  --gold2:#caa536;
+  --teal:#0d97ad;     /* logo I */
+  --navy:#061c3d;     /* logo T */
+  --tealGlow: rgba(13,151,173,.22);
 
-  --glow: 0 18px 60px rgba(0,0,0,.55);
-  --glow2: 0 8px 30px rgba(0,0,0,.45);
+  --shadow1: 0 18px 60px rgba(0,0,0,.55);
+  --shadow2: 0 10px 26px rgba(0,0,0,.35);
 
   --radius: 18px;
   --topbarH: 64px;
+  --filterH: 56px;
 }
 
 *{ box-sizing:border-box; }
-html, body { height:100%; margin:0; }
+html, body{ height:100%; margin:0; }
 body{
   font-family: system-ui, -apple-system, Arial;
   color: var(--text);
   background:
-    radial-gradient(1200px 700px at 20% -20%, rgba(240,210,91,.10), transparent 55%),
-    radial-gradient(900px 600px at 110% 10%, rgba(124,77,255,.10), transparent 55%),
+    radial-gradient(1200px 700px at 20% -20%, rgba(13,151,173,.12), transparent 55%),
+    radial-gradient(900px 600px at 110% 10%, rgba(6,28,61,.20), transparent 55%),
     linear-gradient(180deg, var(--bg0), var(--bg1));
 }
 
-/* ---------- Top bar ---------- */
-.topbar{
-  height: var(--topbarH);
-  position: sticky;
-  top: 0;
-  z-index: 50;
+/* ---------- Basic helpers ---------- */
+.hidden{ display:none !important; }
+.divider{ height:1px; background: var(--stroke); margin: 12px 0; }
+.row{ display:flex; gap: 10px; margin-top: 10px; align-items:center; }
+.msg{ margin-top: 10px; color: var(--muted); }
+.small{ font-size: 13px; opacity: .92; }
 
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding: 14px 16px;
-
-  background: linear-gradient(180deg, rgba(18,20,40,.92), rgba(8,10,20,.75));
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255,255,255,.08);
-}
-
-.brand{
-  font-weight: 900;
-  letter-spacing: .6px;
-  text-transform: lowercase;
-  font-size: 20px;
-}
-
-.userbox{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-
-/* ---------- Layout container ---------- */
-/* No padding so the feed can be truly full height */
+/* ---------- Container ---------- */
 .container{
   max-width: 520px;
   margin: 0 auto;
   padding: 0;
 }
 
-/* Auth card (and any other cards you might keep) */
-.card{
-  margin: 18px 14px;
-  background: linear-gradient(180deg, var(--panelA), var(--panelB));
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  padding: 16px;
-  box-shadow: var(--glow2);
+/* ---------- Topbar ---------- */
+.topbar{
+  height: var(--topbarH);
+  position: sticky;
+  top: 0;
+  z-index: 60;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 14px 16px;
+
+  background: linear-gradient(180deg, rgba(18,20,40,.92), rgba(8,10,20,.75));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(10px);
 }
 
-.card h2{
-  margin: 0 0 12px;
-  font-size: 28px;
-  font-weight: 900;
+.brand{
+  font-weight: 1000;
+  letter-spacing: .4px;
+  font-size: 20px;
+  user-select:none;
+}
+.brand-climb{ color: rgba(244,245,255,.96); }
+.brand-i{ color: var(--teal); margin-left: 1px; }
+.brand-t{ color: rgba(244,245,255,.96); margin-left: 1px; }
+
+/* user box area (pill + logout) */
+.userbox{
+  display:flex;
+  align-items:center;
+  gap: 10px;
 }
 
-/* Helpers */
-.hidden{ display:none; }
-.divider{ height:1px; background: var(--stroke); margin: 12px 0; }
-.row{ display:flex; gap: 10px; margin-top: 10px; }
-
-/* Inputs */
-input{
+/* ---------- Inputs / Select ---------- */
+input, select{
   width:100%;
   padding: 12px 14px;
   border-radius: 14px;
@@ -113,38 +100,56 @@ input{
   color: var(--text);
   outline:none;
 }
+
 input::placeholder{ color: var(--muted2); }
-input:focus{
-  border-color: rgba(240,210,91,.55);
-  box-shadow: 0 0 0 3px rgba(240,210,91,.12);
+
+input:focus, select:focus{
+  border-color: rgba(13,151,173,.55);
+  box-shadow: 0 0 0 3px rgba(13,151,173,.14);
 }
 
-/* Buttons (base) */
+/* Make selects look less “native” */
+select{
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(244,245,255,.75) 50%),
+    linear-gradient(135deg, rgba(244,245,255,.75) 50%, transparent 50%),
+    linear-gradient(180deg, rgba(8,10,18,.95), rgba(10,12,22,.75));
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%,
+    0 0;
+  background-size: 6px 6px, 6px 6px, 100% 100%;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+/* ---------- Buttons ---------- */
 button{
   padding: 11px 14px;
   border-radius: 999px;
-  border: 1px solid var(--stroke);
+  border: 1px solid rgba(255,255,255,.12);
   cursor: pointer;
-  color: #111318;
-  font-weight: 900;
-  background: linear-gradient(180deg, var(--gold), var(--gold2));
-  box-shadow: 0 10px 26px rgba(240,210,91,.18);
+  font-weight: 1000;
+  color: rgba(244,245,255,.96);
+  background: linear-gradient(180deg, rgba(13,151,173,.96), rgba(6,28,61,.96));
+  box-shadow: var(--shadow2);
 }
-button:disabled{ opacity:.55; cursor:not-allowed; }
 
-/* Logout button special */
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+/* Logout button should be quieter */
 #btnLogout{
   background: rgba(255,255,255,.08);
-  color: var(--text);
+  color: rgba(244,245,255,.92);
   border: 1px solid rgba(255,255,255,.12);
   box-shadow: none;
 }
 
-/* Text helpers */
-.msg{ margin-top: 10px; color: var(--muted); }
-.small{ font-size: 13px; opacity: .92; }
-
-/* Pills */
+/* ---------- Pills ---------- */
 .pill{
   display:inline-flex;
   align-items:center;
@@ -155,7 +160,7 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   border: 1px solid rgba(255,255,255,.12);
 }
 
-/* ---------- Yellow plus button ---------- */
+/* ---------- Plus button ---------- */
 .plusFab{
   width: 44px;
   height: 44px;
@@ -164,37 +169,83 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   align-items:center;
   justify-content:center;
 
-  background: linear-gradient(180deg, var(--gold), var(--gold2));
+  background: linear-gradient(180deg, rgba(13,151,173,.96), rgba(6,28,61,.96));
   border: 1px solid rgba(255,255,255,.12);
-  box-shadow: 0 14px 30px rgba(240,210,91,.20);
+  box-shadow: 0 14px 30px rgba(0,0,0,.25);
 
-  color:#111318;
+  color: rgba(244,245,255,.96);
   font-size: 28px;
   line-height: 1;
 }
-.plusIcon{ transform: translateY(-1px); display:block; }
 
-/* =========================================================
-   FULL SCREEN SNAP FEED (Reels/TikTok style)
-   ========================================================= */
+.plusIcon{
+  transform: translateY(-1px);
+  display:block;
+}
 
-/* App area fills remaining screen below topbar */
+/* ---------- Auth card ---------- */
+.card{
+  margin: 18px 14px;
+  padding: 16px;
+
+  background: linear-gradient(180deg, var(--panelA), var(--panelB));
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(0,0,0,.45);
+}
+
+.card h2{
+  margin: 0 0 12px;
+  font-size: 28px;
+  font-weight: 1000;
+}
+
+/* ---------- App section height ---------- */
 #appSection{
   height: calc(100vh - var(--topbarH));
 }
 
-/* Feed container is the scrollable snap viewport */
+/* ---------- Filter bar ---------- */
+.filterBar{
+  height: var(--filterH);
+  position: sticky;
+  top: var(--topbarH);
+  z-index: 55;
+
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 14px;
+
+  background: linear-gradient(180deg, rgba(12,14,26,.78), rgba(8,10,20,.55));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(10px);
+}
+
+.filterLabel{
+  font-weight: 1000;
+  color: rgba(244,245,255,.88);
+  white-space: nowrap;
+}
+
+/* Keep filter select compact */
+.filterBar select{
+  width: 160px;
+  max-width: 55vw;
+  margin-left: auto;
+}
+
+/* ---------- Snap feed ---------- */
 .snapFeed{
-  height: 100%;
+  height: calc(100% - var(--filterH));
   width: 100%;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch;
-
   background: #05060a;
 }
 
-/* Each route card is exactly 1 screen tall */
+/* Each card is one screen tall */
 .routeCard{
   height: 100%;
   width: 100%;
@@ -214,19 +265,19 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   object-fit: cover;
 }
 
-/* Gradient overlay for readability */
+/* Gradient overlay so text reads */
 .routeCard::after{
   content:"";
   position:absolute;
   inset:0;
+  pointer-events:none;
   background:
     linear-gradient(180deg, rgba(0,0,0,.05) 35%,
                           rgba(0,0,0,.55) 75%,
-                          rgba(0,0,0,.78) 100%);
-  pointer-events:none;
+                          rgba(0,0,0,.80) 100%);
 }
 
-/* Text overlay bottom-left */
+/* Meta overlay bottom */
 .meta{
   position: absolute;
   left: 16px;
@@ -241,42 +292,45 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   text-shadow: 0 10px 25px rgba(0,0,0,.70);
 }
 
-/* Your JS uses: <div><b>grade</b> • location</div> then <div class="sub">... */
-.meta > div:first-child{
-  font-size: 24px;
+/* Title line: badge + problem name */
+.titleLine{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  font-size: 22px;
   font-weight: 1000;
-}
-.sub{
-  opacity: .85;
-  font-size: 14px;
-  color: rgba(244,245,255,.85);
+  line-height: 1.1;
 }
 
-/* Sent button bottom-right */
-.sentBtn{
-  position: absolute;
-  right: 16px;
-  bottom: 18px;
-  z-index: 4;
-
-  padding: 10px 14px;
+.badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 46px;
+  padding: 6px 10px;
   border-radius: 999px;
 
-  background: rgba(0,0,0,.40);
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,.14);
-  box-shadow: 0 10px 26px rgba(0,0,0,.35);
-  backdrop-filter: blur(10px);
-
-  font-weight: 900;
-}
-.sentBtn:disabled{
-  background: rgba(255,255,255,.10);
-  color: rgba(244,245,255,.70);
-  border-color: rgba(255,255,255,.12);
+  background: rgba(13,151,173,.18);
+  border: 1px solid rgba(13,151,173,.34);
+  color: rgba(244,245,255,.96);
+  font-weight: 1000;
+  letter-spacing: .2px;
 }
 
-/* Mute button top-right (your JS class: .muteBtn) */
+.problem{
+  color: rgba(244,245,255,.96);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subLine{
+  opacity: .90;
+  font-size: 14px;
+  color: rgba(244,245,255,.84);
+}
+
+/* Mute button top-right */
 .muteBtn{
   position: absolute;
   right: 16px;
@@ -286,38 +340,22 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   padding: 10px 12px;
   border-radius: 999px;
 
-  background: rgba(0,0,0,.40);
-  color: var(--text);
+  background: rgba(0,0,0,.42);
+  color: rgba(244,245,255,.95);
   border: 1px solid rgba(255,255,255,.14);
   box-shadow: 0 10px 26px rgba(0,0,0,.25);
   backdrop-filter: blur(10px);
 
-  font-weight: 900;
+  font-weight: 1000;
 }
 
-/* Small message text (your JS: <div class="msg small"></div>) */
-.routeCard .msg.small{
-  position: absolute;
-  left: 16px;
-  bottom: 62px;
-  z-index: 4;
-
-  margin: 0;
-  color: rgba(240,210,91,.95);
-  text-shadow: 0 10px 25px rgba(0,0,0,.70);
-}
-
-/* =========================================================
-   Upload Overlay
-   ========================================================= */
-
+/* ---------- Upload overlay ---------- */
 .overlay{
   position: fixed;
   inset: 0;
   z-index: 999;
 }
 
-/* Backdrop */
 .overlayBackdrop{
   position: absolute;
   inset: 0;
@@ -325,7 +363,6 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   backdrop-filter: blur(10px);
 }
 
-/* Panel */
 .sharePanel{
   position: absolute;
   left: 12px;
@@ -340,7 +377,15 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
   box-shadow: 0 30px 90px rgba(0,0,0,.65);
 }
 
-/* Header */
+/* subtle open animation (works with your JS .show toggle) */
+.overlay.show .sharePanel{
+  animation: popIn .18s ease-out both;
+}
+@keyframes popIn{
+  from{ transform: translateY(8px) scale(.985); opacity: .0; }
+  to{ transform: translateY(0) scale(1); opacity: 1; }
+}
+
 .shareHeader{
   display:flex;
   align-items:center;
@@ -351,21 +396,29 @@ button:disabled{ opacity:.55; cursor:not-allowed; }
 
 .shareTitle{
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 1000;
 }
 
 .closeBtn{
   background: rgba(255,255,255,.10);
-  color: var(--text);
+  color: rgba(244,245,255,.95);
   border: 1px solid rgba(255,255,255,.12);
   box-shadow: none;
   padding: 10px 12px;
   border-radius: 14px;
 }
 
-.shareBody{ padding: 14px; }
+.shareBody{
+  padding: 14px;
+}
 
-/* Optional: slight mobile polish */
+/* File input: make it not ugly */
+input[type="file"]{
+  padding: 10px 12px;
+}
+
+/* Mobile tweaks */
 @media (max-width: 420px){
-  .meta > div:first-child{ font-size: 22px; }
+  .titleLine{ font-size: 20px; }
+  .filterBar select{ width: 140px; }
 }
