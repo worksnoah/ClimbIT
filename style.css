@@ -4,6 +4,85 @@
    - Sticky topbar + sticky filter bar
    - Upload overlay modal
    ========================================================= */
+/* Top right user button */
+.userbox{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap: 10px;
+}
+
+.userPill{
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.35);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: none;
+  backdrop-filter: blur(10px);
+  font-weight: 900;
+}
+
+/* Same overlay behavior you already use */
+.overlay.hidden{ display:none; }
+.overlay.show .menuPanel{ transform: translateY(0); opacity: 1; }
+
+/* Backdrop blur intensity (match your upload overlay vibe) */
+#userMenuOverlay .overlayBackdrop{
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(10px);
+}
+
+/* Menu panel */
+.menuPanel{
+  position: absolute;
+  right: 12px;
+  top: calc(var(--topbarH) + 10px);
+  width: min(360px, calc(100vw - 24px));
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(20,22,40,.95), rgba(10,12,22,.90));
+  box-shadow: 0 30px 90px rgba(0,0,0,.65);
+
+  transform: translateY(-8px);
+  opacity: 0;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.menuHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.menuTitle{
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.menuBody{ padding: 14px; }
+
+.menuItem{
+  padding: 10px 8px;
+  border-radius: 14px;
+}
+
+.menuItem.muted{
+  color: rgba(244,245,255,.70);
+}
+
+.menuLogout{
+  width: 100%;
+  background: var(--teal); /* solid teal */
+  color: #061c3d;
+  box-shadow: none;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 1000;
+}
 
 :root{
   --bg0:#07080c;
