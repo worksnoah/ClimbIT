@@ -7,6 +7,29 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 
+<!-- User Menu Overlay -->
+<div id="userMenuOverlay" class="overlay hidden" aria-hidden="true">
+  <div class="overlayBackdrop"></div>
+
+  <section class="menuPanel" role="dialog" aria-modal="true" aria-label="Account menu">
+    <div class="menuHeader">
+      <div class="menuTitle">Menu</div>
+      <button id="closeUserMenu" class="closeBtn" aria-label="Close">✕</button>
+    </div>
+
+    <div class="menuBody">
+      <div class="menuItem muted">Coming soon…</div>
+      <div class="menuItem muted">• Filters</div>
+      <div class="menuItem muted">• Profile</div>
+      <div class="menuItem muted">• Saved climbs</div>
+
+      <div class="divider"></div>
+
+      <button id="btnLogout" class="menuLogout">Logout</button>
+    </div>
+  </section>
+</div>
+  
 <body>
   <!-- Top bar -->
   <header class="topbar">
